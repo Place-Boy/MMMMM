@@ -19,6 +19,10 @@ public class Config
 {
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
+    private static final ModConfigSpec.ConfigValue<String> PACK_URL = BUILDER
+            .comment("URL to locate the modpack for the client to download")
+            .define("packUrl", "replace");
+
     private static final ModConfigSpec.BooleanValue LOG_DIRT_BLOCK = BUILDER
             .comment("Whether to log the dirt block on common setup")
             .define("logDirtBlock", true);
@@ -41,6 +45,7 @@ public class Config
     public static boolean logDirtBlock;
     public static int magicNumber;
     public static String magicNumberIntroduction;
+    public static String packURL;
     public static Set<Item> items;
 
     private static boolean validateItemName(final Object obj)
@@ -54,6 +59,7 @@ public class Config
         logDirtBlock = LOG_DIRT_BLOCK.get();
         magicNumber = MAGIC_NUMBER.get();
         magicNumberIntroduction = MAGIC_NUMBER_INTRODUCTION.get();
+        packURL = PACK_URL.get();
 
         // convert the list of strings into a set of items
         items = ITEM_STRINGS.get().stream()
