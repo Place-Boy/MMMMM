@@ -1,6 +1,7 @@
 package com.example.examplemod;
 
 // Import statements will go here. For now, they are omitted for brevity.
+import net.minecraft.util.HttpUtil;
 import net.neoforged.api.distmarker.Dist;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -8,12 +9,24 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.IConfigSpec;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.server.loading.ServerModLoader;
 import org.slf4j.Logger;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 @Mod(ExampleMod.MODID) // Main class annotation to define this as a Mod entry point.
 public class ExampleMod {
@@ -34,6 +47,15 @@ public class ExampleMod {
 
         // Example of registering a setup event directly.
         modEventBus.addListener(this::commonSetup);
+
+        Path savePath = Path.of("MMMMM/download.zip");
+
+        try {
+            Files.createDirectories(savePath.getParent()); // Creates the MMMMM folder if it doesn't exist
+        } catch (IOException e) {
+            LOGGER.error("Failed to create MMMMM folder", e);
+            return; // Exit if the folder cannot be created
+        }
     }
 
     /**
@@ -47,14 +69,37 @@ public class ExampleMod {
     @SubscribeEvent
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         LOGGER.info("Player joined");
-        try {
-            java.net.HttpURLConnection connection = (java.net.HttpURLConnection) new java.net.URL(Config.packURL).openConnection();
-            // Further connection setup or usage here
-        } catch (java.net.MalformedURLException e) {
-            LOGGER.error("Invalid URL provided in config: {}", Config.packURL, e);
-        } catch (java.io.IOException e) {
-            LOGGER.error("Failed to open a connection to the URL: {}", Config.packURL, e);
+
+        Path savePath = Path.of("MMMMM/download.zip");
+        if (Config.useHTTP == true) {
+            try {
+                Executors.newSingleThreadExecutor().execute(() -> {
+                    try {
+                        HttpURLConnection connection = (HttpURLConnection) new URL(Config.packURL).openConnection();
+                        connection.setRequestMethod("GET");
+                        connection.setConnectTimeout(5000);
+
+                        int responseCode = connection.getResponseCode();
+                        if (responseCode == HttpURLConnection.HTTP_OK) {
+                            try (InputStream inputStream = connection.getInputStream()) {
+                                Files.copy(inputStream, savePath, StandardCopyOption.REPLACE_EXISTING);
+                                LOGGER.info("File downloaded successfully to: " + savePath);
+                            }
+                        }
+                    } catch (java.net.MalformedURLException e) {
+                        LOGGER.error("Invalid URL provided in config: {}", Config.packURL, e);
+                    } catch (java.io.IOException e) {
+                        LOGGER.error("Failed to open a connection to the URL: {}", Config.packURL, e);
+                    }
+                });
+            } catch (Exception e) {
+                LOGGER.error("Unexpected error occurred during file download", e);
+            }
         }
+        else {
+            LOGGER.error("HTTP request is disabled in config");
+        }
+
     }
 
     /**
