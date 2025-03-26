@@ -39,7 +39,7 @@ public class Config {
     // Path to the folder to host files from
     private static final ModConfigSpec.ConfigValue<String> FILE_DIRECTORY = BUILDER
             .comment("Path in the server directory to host files from")
-            .define("fileDirectory", "shared-files");
+            .define("fileDirectory", "MMMMM/shared-files");
 
     // More mod-specific options can be added here...
 

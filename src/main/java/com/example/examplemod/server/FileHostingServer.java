@@ -14,7 +14,7 @@ public class FileHostingServer {
 
     private static HttpServer fileHostingServer;
     public static final int FILE_SERVER_PORT = 8080;
-    public static final Path FILE_DIRECTORY = Path.of("shared-files");
+    public static final Path FILE_DIRECTORY = Path.of("MMMMM/shared-files");
 
     /**
      * Starts the file hosting server.
