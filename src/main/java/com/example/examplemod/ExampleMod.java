@@ -1,141 +1,133 @@
 package com.example.examplemod;
 
-// Import statements will go here. For now, they are omitted for brevity.
-import net.minecraft.util.HttpUtil;
-import net.neoforged.api.distmarker.Dist;
 import com.mojang.logging.LogUtils;
-import net.neoforged.bus.api.IEventBus;
+import com.sun.net.httpserver.HttpServer;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.network.chat.Component;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.IConfigSpec;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.server.loading.ServerModLoader;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
-@Mod(ExampleMod.MODID) // Main class annotation to define this as a Mod entry point.
+/**
+ * Main mod class for ExampleMod, with events safely separated into client and server logic.
+ */
+@Mod(ExampleMod.MODID)
 public class ExampleMod {
 
-    // Define the mod ID (used as a namespace prefix throughout the mod).
     public static final String MODID = "examplemod";
+    public static final Logger LOGGER = LogUtils.getLogger();
+    private static HttpServer fileHostingServer; // File hosting server instance
 
-    // Logger instance for debugging and information logging.
-    private static final Logger LOGGER = LogUtils.getLogger();
+    // Default configuration settings, overridable through the config file
+    public static int FILE_SERVER_PORT = 8080;
+    public static final Path FILE_DIRECTORY = Path.of("shared-files");
 
     /**
-     * Example constructor for the mod, where initialization logic is placed.
-     * Called during mod loading. Automatically receives required parameters like event buses.
+     * Constructor for the ExampleMod class.
      */
-    public ExampleMod(IEventBus modEventBus, ModContainer modContainer) {
-        // Register mod-specific setup events or logic here.
+    public ExampleMod(ModContainer modContainer) {
         LOGGER.info("Initializing ExampleMod...");
-
-        // Example of registering a setup event directly.
-        modEventBus.addListener(this::commonSetup);
-
-        Path savePath = Path.of("MMMMM/download.zip");
-
-        try {
-            Files.createDirectories(savePath.getParent()); // Creates the MMMMM folder if it doesn't exist
-        } catch (IOException e) {
-            LOGGER.error("Failed to create MMMMM folder", e);
-            return; // Exit if the folder cannot be created
-        }
+        // Register configuration during initialization
+        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
     /**
-     * Common setup method, which is used for initializing shared mod components.
-     * This is called during a specific lifecycle phase set by Minecraft Forge.
+     * Starts the file hosting server to serve files from the shared directory.
      */
-    private void commonSetup(final FMLCommonSetupEvent event) {
-        LOGGER.info("Performing common setup for ExampleMod...");
-    }
-
-    @SubscribeEvent
-    public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        LOGGER.info("Player joined");
-
-        Path savePath = Path.of("MMMMM/mods.zip");
-        try {
-            Executors.newSingleThreadExecutor().execute(() -> {
-                try {
-                    HttpURLConnection connection = (HttpURLConnection) new URL(Config.packURL).openConnection();
-                    connection.setRequestMethod("GET");
-                    connection.setConnectTimeout(5000);
-
-                    int responseCode = connection.getResponseCode();
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
-                        try (InputStream inputStream = connection.getInputStream()) {
-                            Files.copy(inputStream, savePath, StandardCopyOption.REPLACE_EXISTING);
-                            LOGGER.info("File downloaded successfully to: " + savePath);
-                        }
-                    }
-                } catch (java.net.MalformedURLException e) {
-                    LOGGER.error("Invalid URL provided in config: {}", Config.packURL, e);
-                } catch (java.io.IOException e) {
-                    LOGGER.error("Failed to open a connection to the URL: {}", Config.packURL, e);
-                }
-                unzip(savePath, Path.of("MMMMM/mods"));
-            });
-        } catch (Exception e) {
-            LOGGER.error("Unexpected error occurred during file download", e);
+    public void startFileHostingServer() throws IOException {
+        if (!Files.exists(FILE_DIRECTORY)) {
+            Files.createDirectories(FILE_DIRECTORY);
         }
-    }
-
-    /**
-     * Example event listener for when the server is starting.
-     * Events allow reactions to game states.
-     */
-    @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event) {
-        LOGGER.info("Server is starting with ExampleMod loaded...");
-    }
-
-    /**
-     * Static inner class for client-specific events.
-     * This ensures client-specific code does not get executed on the server side.
-     */
-    @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-    public static class ClientModEvents {
-
-        /**
-         * Handles client setup logic, e.g., rendering or key bindings.
-         */
-        @SubscribeEvent
-        public static void onClientSetup(FMLClientSetupEvent event) {
-            LOGGER.info("Setting up client for ExampleMod...");
-        }
-    }
-    private void unzip(Path zipFile, Path destDir) {
-        try (java.util.zip.ZipInputStream zipIn = new java.util.zip.ZipInputStream(Files.newInputStream(zipFile))) {
-            java.util.zip.ZipEntry entry;
-            while ((entry = zipIn.getNextEntry()) != null) {
-                Path filePath = destDir.resolve(entry.getName());
-                if (entry.isDirectory()) {
-                    Files.createDirectories(filePath);
-                } else {
-                    Files.createDirectories(filePath.getParent());
-                    Files.copy(zipIn, filePath, StandardCopyOption.REPLACE_EXISTING);
-                }
-                zipIn.closeEntry();
+        fileHostingServer = HttpServer.create(new InetSocketAddress(FILE_SERVER_PORT), 0);
+        fileHostingServer.createContext("/", exchange -> {
+            Path filePath = FILE_DIRECTORY.resolve(exchange.getRequestURI().getPath().substring(1)).normalize();
+            if (!filePath.startsWith(FILE_DIRECTORY)) {
+                exchange.sendResponseHeaders(403, -1); // Forbidden
+                return;
             }
-        } catch (IOException e) {
-            LOGGER.error("Failed to unzip file {} to {}", zipFile, destDir, e);
+            if (Files.exists(filePath)) {
+                byte[] fileBytes = Files.readAllBytes(filePath);
+                exchange.sendResponseHeaders(200, fileBytes.length);
+                exchange.getResponseBody().write(fileBytes);
+            } else {
+                exchange.sendResponseHeaders(404, -1); // Not Found
+            }
+            exchange.close();
+        });
+        fileHostingServer.start();
+        LOGGER.info("File hosting server started on port " + FILE_SERVER_PORT);
+    }
+
+    /**
+     * Stops the file hosting server.
+     */
+    public static void stopFileHostingServer() {
+        if (fileHostingServer != null) {
+            fileHostingServer.stop(0);
+            LOGGER.info("File hosting server stopped.");
         }
+    }
+}
+
+/**
+ * Client-side event handlers for ExampleMod.
+ */
+@Mod(value = ExampleMod.MODID, dist = Dist.CLIENT)
+class ClientEventHandlers {
+
+    /**
+     * Adds a custom button to the Title Screen.
+     */
+    @SubscribeEvent
+    public static void onTitleScreenOpen(ScreenEvent.Opening event) {
+        if (event.getScreen() instanceof TitleScreen titleScreen) {
+            Button customButton = Button.builder(
+                    Component.literal("Check for Updates"),
+                            button -> ExampleMod.LOGGER.info("Update check triggered!"))
+                    .pos(titleScreen.width / 2 - 100, titleScreen.height / 4 + 48) // Set position
+                    .size(200, 20) // Set size
+                    .build();
+            titleScreen.renderables.add(customButton);
+        }
+    }
+}
+
+/**
+ * Server-side event handlers for ExampleMod.
+ */
+@Mod(value = ExampleMod.MODID, dist = Dist.DEDICATED_SERVER)
+class ServerEventHandlers {
+
+    /**
+     * Start the file hosting server when the server starts.
+     */
+    @SubscribeEvent
+    public static void onServerStarting(ServerStartingEvent event) {
+        try {
+            ExampleMod.LOGGER.info("Starting the file hosting server...");
+            new ExampleMod(null).startFileHostingServer();
+        } catch (IOException e) {
+            ExampleMod.LOGGER.error("Failed to start file hosting server: ", e);
+        }
+    }
+
+    /**
+     * Perform common setup, if necessary (can be extended in the future).
+     */
+    @SubscribeEvent
+    public static void onCommonSetup(FMLCommonSetupEvent event) {
+        ExampleMod.LOGGER.info("Performing common setup tasks.");
     }
 }
