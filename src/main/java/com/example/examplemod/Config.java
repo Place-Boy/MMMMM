@@ -23,14 +23,9 @@ public class Config
             .comment("URL to locate the modpack for the client to download")
             .define("packUrl", "replace");
 
-    private static final ModConfigSpec.ConfigValue<Boolean> HTTP = BUILDER
-            .comment("Use HTTP request. If disabled will scan folders on server instead (less stable)")
-            .define("useHTTP", true);
-
     static final ModConfigSpec SPEC = BUILDER.build();
 
     public static String packURL;
-    public static boolean useHTTP;
 
     private static boolean validateItemName(final Object obj)
     {
@@ -41,6 +36,5 @@ public class Config
     static void onLoad(final ModConfigEvent event)
     {
         packURL = PACK_URL.get();
-        useHTTP = HTTP.get();
     }
 }

@@ -70,36 +70,31 @@ public class ExampleMod {
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         LOGGER.info("Player joined");
 
-        Path savePath = Path.of("MMMMM/download.zip");
-        if (Config.useHTTP == true) {
-            try {
-                Executors.newSingleThreadExecutor().execute(() -> {
-                    try {
-                        HttpURLConnection connection = (HttpURLConnection) new URL(Config.packURL).openConnection();
-                        connection.setRequestMethod("GET");
-                        connection.setConnectTimeout(5000);
+        Path savePath = Path.of("MMMMM/mods.zip");
+        try {
+            Executors.newSingleThreadExecutor().execute(() -> {
+                try {
+                    HttpURLConnection connection = (HttpURLConnection) new URL(Config.packURL).openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.setConnectTimeout(5000);
 
-                        int responseCode = connection.getResponseCode();
-                        if (responseCode == HttpURLConnection.HTTP_OK) {
-                            try (InputStream inputStream = connection.getInputStream()) {
-                                Files.copy(inputStream, savePath, StandardCopyOption.REPLACE_EXISTING);
-                                LOGGER.info("File downloaded successfully to: " + savePath);
-                            }
+                    int responseCode = connection.getResponseCode();
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        try (InputStream inputStream = connection.getInputStream()) {
+                            Files.copy(inputStream, savePath, StandardCopyOption.REPLACE_EXISTING);
+                            LOGGER.info("File downloaded successfully to: " + savePath);
                         }
-                    } catch (java.net.MalformedURLException e) {
-                        LOGGER.error("Invalid URL provided in config: {}", Config.packURL, e);
-                    } catch (java.io.IOException e) {
-                        LOGGER.error("Failed to open a connection to the URL: {}", Config.packURL, e);
                     }
-                });
-            } catch (Exception e) {
-                LOGGER.error("Unexpected error occurred during file download", e);
-            }
+                } catch (java.net.MalformedURLException e) {
+                    LOGGER.error("Invalid URL provided in config: {}", Config.packURL, e);
+                } catch (java.io.IOException e) {
+                    LOGGER.error("Failed to open a connection to the URL: {}", Config.packURL, e);
+                }
+                unzip(savePath, Path.of("MMMMM/mods"));
+            });
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error occurred during file download", e);
         }
-        else {
-            LOGGER.error("HTTP request is disabled in config");
-        }
-
     }
 
     /**
@@ -124,6 +119,23 @@ public class ExampleMod {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("Setting up client for ExampleMod...");
+        }
+    }
+    private void unzip(Path zipFile, Path destDir) {
+        try (java.util.zip.ZipInputStream zipIn = new java.util.zip.ZipInputStream(Files.newInputStream(zipFile))) {
+            java.util.zip.ZipEntry entry;
+            while ((entry = zipIn.getNextEntry()) != null) {
+                Path filePath = destDir.resolve(entry.getName());
+                if (entry.isDirectory()) {
+                    Files.createDirectories(filePath);
+                } else {
+                    Files.createDirectories(filePath.getParent());
+                    Files.copy(zipIn, filePath, StandardCopyOption.REPLACE_EXISTING);
+                }
+                zipIn.closeEntry();
+            }
+        } catch (IOException e) {
+            LOGGER.error("Failed to unzip file {} to {}", zipFile, destDir, e);
         }
     }
 }
