@@ -16,12 +16,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.util.concurrent.Executors;
 
 /**
@@ -82,6 +80,9 @@ public class ClientEventHandlers {
     }
 
     private static void downloadAndProcessMod() {
+        if (Config.packURL.isEmpty()) {
+            Minecraft.getInstance().setScreen(new WarningScreen(Component.literal("Enter URL to download mods from such as https://example.com/mods.zip:")));
+        }
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
                 String modsUrl = Config.packURL; // URL for mods ZIP file

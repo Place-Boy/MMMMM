@@ -21,6 +21,6 @@ public class ExampleMod {
         // Register configuration
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
-        // No need to manually register event handlers
+        LOGGER.info("ExampleMod initialized.");
     }
 }
