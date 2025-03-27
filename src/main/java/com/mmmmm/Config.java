@@ -1,4 +1,4 @@
-package com.example.examplemod;
+package com.mmmmm;
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -8,7 +8,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 /**
  * Config class to handle mod settings and updates.
  */
-@EventBusSubscriber(modid = ExampleMod.MODID, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.MOD)
 public class Config {
 
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
@@ -84,12 +84,12 @@ public class Config {
         fileDirectory = FILE_DIRECTORY.get();
 
         // Log configuration load
-        ExampleMod.LOGGER.info("Configuration loaded:");
-        ExampleMod.LOGGER.info("Button X: {}", buttonX);
-        ExampleMod.LOGGER.info("Button Y: {}", buttonY);
-        ExampleMod.LOGGER.info("Pack URL: {}", packURL);
-        ExampleMod.LOGGER.info("File Server Port: {}", fileServerPort);
-        ExampleMod.LOGGER.info("Enable File Server: {}", enableFileServer);
-        ExampleMod.LOGGER.info("File Directory: {}", fileDirectory);
+        MMMMM.LOGGER.info("Configuration loaded:");
+        MMMMM.LOGGER.info("Button X: {}", buttonX);
+        MMMMM.LOGGER.info("Button Y: {}", buttonY);
+        MMMMM.LOGGER.info("Pack URL: {}", packURL);
+        MMMMM.LOGGER.info("File Server Port: {}", fileServerPort);
+        MMMMM.LOGGER.info("Enable File Server: {}", enableFileServer);
+        MMMMM.LOGGER.info("File Directory: {}", fileDirectory);
     }
 }

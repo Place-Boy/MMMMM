@@ -1,4 +1,4 @@
-package com.example.examplemod;
+package com.mmmmm;
 
 import com.mojang.logging.LogUtils;
 import net.neoforged.fml.ModContainer;
@@ -9,13 +9,13 @@ import org.slf4j.Logger;
 /**
  * Main mod class for ExampleMod.
  */
-@Mod(ExampleMod.MODID)
-public class ExampleMod {
+@Mod(MMMMM.MODID)
+public class MMMMM {
 
-    public static final String MODID = "examplemod";
+    public static final String MODID = "mmmmm";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public ExampleMod(ModContainer modContainer) {
+    public MMMMM(ModContainer modContainer) {
         LOGGER.info("Initializing ExampleMod...");
 
         // Register configuration

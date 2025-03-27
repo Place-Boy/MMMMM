@@ -1,7 +1,7 @@
-package com.example.examplemod.client;
+package com.mmmmm.client;
 
-import com.example.examplemod.Config;
-import com.example.examplemod.ExampleMod;
+import com.mmmmm.Config;
+import com.mmmmm.MMMMM;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.network.chat.Component;
@@ -25,7 +25,7 @@ import java.util.concurrent.Executors;
 /**
  * Handles client-side events for ExampleMod.
  */
-@EventBusSubscriber(modid = ExampleMod.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class ClientEventHandlers {
 
     private static final int CONNECTION_TIMEOUT_MS = 5000;

@@ -1,6 +1,6 @@
-package com.example.examplemod.server;
+package com.mmmmm.server;
 
-import com.example.examplemod.ExampleMod;
+import com.mmmmm.MMMMM;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -33,7 +33,7 @@ public class FileHostingServer {
             try {
                 // Log the incoming request URI
                 String requestPath = exchange.getRequestURI().getPath();
-                ExampleMod.LOGGER.info("Received request: " + requestPath);
+                MMMMM.LOGGER.info("Received request: " + requestPath);
 
                 // Handle the root path ("/") request
                 if ("/".equals(requestPath)) {
@@ -41,14 +41,14 @@ public class FileHostingServer {
                     Path defaultFile = FILE_DIRECTORY.resolve("index.html").normalize();
 
                     if (Files.exists(defaultFile)) {
-                        ExampleMod.LOGGER.info("Serving default file: " + defaultFile);
+                        MMMMM.LOGGER.info("Serving default file: " + defaultFile);
                         byte[] defaultFileBytes = Files.readAllBytes(defaultFile);
                         exchange.getResponseHeaders().add("Content-Type", "text/html");
                         exchange.sendResponseHeaders(200, defaultFileBytes.length);
                         exchange.getResponseBody().write(defaultFileBytes);
                     } else {
                         // Generate and serve a directory listing if index.html is not found
-                        ExampleMod.LOGGER.info("Generating directory listing for root request.");
+                        MMMMM.LOGGER.info("Generating directory listing for root request.");
                         String fileList = Files.list(FILE_DIRECTORY)
                                 .map(path -> "<li><a href=\"/" + path.getFileName() + "\">" + path.getFileName() + "</a></li>")
                                 .collect(Collectors.joining());
@@ -66,14 +66,14 @@ public class FileHostingServer {
 
                 // Security: Ensure the resolved file path is within the allowed directory
                 if (!filePath.startsWith(FILE_DIRECTORY)) {
-                    ExampleMod.LOGGER.warn("Unauthorized access attempt: " + filePath);
+                    MMMMM.LOGGER.warn("Unauthorized access attempt: " + filePath);
                     exchange.sendResponseHeaders(403, -1); // Forbidden
                     return;
                 }
 
                 // Check if the requested file exists
                 if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
-                    ExampleMod.LOGGER.warn("File not found: " + filePath);
+                    MMMMM.LOGGER.warn("File not found: " + filePath);
                     exchange.sendResponseHeaders(404, -1); // Not Found
                     return;
                 }
@@ -84,15 +84,15 @@ public class FileHostingServer {
                 exchange.sendResponseHeaders(200, fileBytes.length);
                 exchange.getResponseBody().write(fileBytes);
 
-                ExampleMod.LOGGER.info("Successfully served file: " + filePath);
+                MMMMM.LOGGER.info("Successfully served file: " + filePath);
 
             } catch (Exception e) {
                 // Handle unexpected errors gracefully
-                ExampleMod.LOGGER.error("Error processing request", e);
+                MMMMM.LOGGER.error("Error processing request", e);
                 try {
                     exchange.sendResponseHeaders(500, -1); // Internal Server Error
                 } catch (IOException ioException) {
-                    ExampleMod.LOGGER.error("Failed to send error response", ioException);
+                    MMMMM.LOGGER.error("Failed to send error response", ioException);
                 }
             } finally {
                 // Ensure the exchange is always closed to release resources
@@ -102,7 +102,7 @@ public class FileHostingServer {
 
         // Start the server
         fileHostingServer.start();
-        ExampleMod.LOGGER.info("File hosting server started on port " + FILE_SERVER_PORT);
+        MMMMM.LOGGER.info("File hosting server started on port " + FILE_SERVER_PORT);
     }
 
     /**
@@ -111,7 +111,7 @@ public class FileHostingServer {
     public static void stop() {
         if (fileHostingServer != null) {
             fileHostingServer.stop(0);
-            ExampleMod.LOGGER.info("File hosting server stopped.");
+            MMMMM.LOGGER.info("File hosting server stopped.");
         }
     }
 }
