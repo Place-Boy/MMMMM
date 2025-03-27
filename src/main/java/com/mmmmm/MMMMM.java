@@ -16,11 +16,11 @@ public class MMMMM {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public MMMMM(ModContainer modContainer) {
-        LOGGER.info("Initializing ExampleMod...");
+        LOGGER.info("Initializing MMMMM...");
 
         // Register configuration
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
-        LOGGER.info("ExampleMod initialized.");
+        LOGGER.info("MMMMM initialized.");
     }
 }
