@@ -13,6 +13,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -20,6 +21,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.Executors;
 
 /**
@@ -80,48 +82,117 @@ public class ClientEventHandlers {
     }
 
     private static void downloadAndProcessMod() {
-        try {
-            Executors.newSingleThreadExecutor().execute(() -> {
-                HttpURLConnection connection = null;
-                try {
-                    connection = initializeConnection(Config.packURL);
-                    if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                        downloadFile(connection, MOD_DOWNLOAD_PATH);
-                        LOGGER.info("File downloaded successfully to: " + MOD_DOWNLOAD_PATH);
-                    } else {
-                        LOGGER.warn("Unexpected response code: " + connection.getResponseCode());
-                    }
-                } catch (MalformedURLException e) {
-                    LOGGER.error("Invalid URL in config: {}", Config.packURL, e);
-                } catch (Exception e) {
-                    LOGGER.error("Error during file download", e);
-                } finally {
-                    if (connection != null) {
-                        connection.disconnect();
-                    }
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                String modsUrl = Config.packURL; // URL for mods ZIP file
+                LOGGER.info("Starting mod download from: {}", modsUrl);
+
+                // Initialize connection and download the file
+                HttpURLConnection connection = initializeConnection(modsUrl);
+                downloadFile(connection, MOD_DOWNLOAD_PATH);
+
+                // Check if the ZIP file is valid (non-empty)
+                if (Files.size(MOD_DOWNLOAD_PATH) == 0) {
+                    LOGGER.error("Downloaded ZIP file is empty: {}", MOD_DOWNLOAD_PATH);
+                    throw new IOException("The downloaded mods file is empty!");
+                }
+                LOGGER.info("Downloaded ZIP file size: {} bytes", Files.size(MOD_DOWNLOAD_PATH));
+
+                // Proceed to extract the ZIP file
+                if (!Files.exists(UNZIP_DESTINATION)) {
+                    Files.createDirectories(UNZIP_DESTINATION);
                 }
                 zipIn(MOD_DOWNLOAD_PATH, UNZIP_DESTINATION);
-            });
-        } catch (Exception e) {
-            LOGGER.error("Unexpected error occurred in download executor", e);
-        }
+
+                // Notify success
+                sendPlayerMessage("Mods downloaded and extracted successfully!");
+
+            } catch (Exception e) {
+                LOGGER.error("Failed to download or extract mods", e);
+                sendPlayerMessage("Failed to download or extract mods. Check logs for more details.");
+            }
+        });
     }
 
     private static HttpURLConnection initializeConnection(String url) throws Exception {
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setRequestMethod("GET");
+        URL downloadUrl = new URL(url);
+        HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
         connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
+        connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
+        connection.setRequestMethod("GET");
+
+        int responseCode = connection.getResponseCode();
+        LOGGER.info("Connecting to {} - Response Code: {}", url, responseCode);
+
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            throw new IOException("Failed to fetch mods - Server returned response code: " + responseCode);
+        }
+
         return connection;
     }
 
     private static void downloadFile(HttpURLConnection connection, Path destination) throws Exception {
-        try (InputStream inputStream = connection.getInputStream()) {
-            Files.copy(inputStream, destination, StandardCopyOption.REPLACE_EXISTING);
+        try (InputStream in = connection.getInputStream()) {
+            String contentType = connection.getHeaderField("Content-Type");
+
+            // Accept both application/zip and application/octet-stream
+            if (!"application/zip".equals(contentType) && !"application/octet-stream".equals(contentType)) {
+                String errorPreview = new String(in.readNBytes(50)); // Read for debugging
+                LOGGER.error("Unexpected Content-Type: {}. Preview of response: {}", contentType, errorPreview);
+                throw new IOException("Unexpected Content-Type: " + contentType + ". Expected application/zip.");
+            }
+
+            // Proceed to download the file
+            Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
+            LOGGER.info("File downloaded successfully to: {}", destination);
         }
     }
 
     private static void zipIn(Path zipFilePath, Path destinationPath) {
-        // Method implementation assumed to already exist
+        try (InputStream fileInputStream = Files.newInputStream(zipFilePath);
+             java.util.zip.ZipInputStream zipInputStream = new java.util.zip.ZipInputStream(fileInputStream)) {
+
+            java.util.zip.ZipEntry entry;
+
+            while ((entry = zipInputStream.getNextEntry()) != null) {
+                // Extract entry name and normalize
+                Path entryPath = Path.of(entry.getName()).normalize();
+
+                // If the entry has only one component (e.g., "mod1.jar"), use it directly
+                if (entryPath.getNameCount() == 1) {
+                    entryPath = entryPath.getFileName(); // Use just the file name
+                } else if (entryPath.getNameCount() > 1) {
+                    // If the entry has subpaths, adjust the path accordingly
+                    entryPath = entryPath.subpath(1, entryPath.getNameCount());
+                } else {
+                    LOGGER.warn("Skipping invalid or empty entry: {}", entry.getName());
+                    continue;
+                }
+
+                // Final file location
+                Path newFilePath = destinationPath.resolve(entryPath).normalize();
+
+                // Ensure the path doesn't escape the destination directory
+                if (!newFilePath.startsWith(destinationPath)) {
+                    throw new IOException("Invalid ZIP entry attempting to escape destination: " + entry.getName());
+                }
+
+                if (entry.isDirectory()) {
+                    Files.createDirectories(newFilePath);
+                } else {
+                    Files.createDirectories(newFilePath.getParent());
+                    Files.copy(zipInputStream, newFilePath, StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                zipInputStream.closeEntry();
+            }
+
+            LOGGER.info("ZIP file extracted successfully to: {}", destinationPath);
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to extract ZIP file.", e);
+            sendPlayerMessage("Failed to extract mods. Check logs for details.");
+        }
     }
 
 

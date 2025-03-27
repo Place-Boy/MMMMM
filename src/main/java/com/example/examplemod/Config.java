@@ -15,7 +15,7 @@ public class Config {
 
     private static final ModConfigSpec.ConfigValue<Integer> BUTTON_X = BUILDER
             .comment("Button X position")
-            .define("buttonX", -200);
+            .define("buttonX", -300);
 
     private static final ModConfigSpec.ConfigValue<Integer> BUTTON_Y = BUILDER
             .comment("Button Y position")
@@ -24,7 +24,7 @@ public class Config {
     // URL for modpack downloads or resource file hosting
     private static final ModConfigSpec.ConfigValue<String> PACK_URL = BUILDER
             .comment("URL to locate the modpack files or resource packs for the client to download")
-            .define("packUrl", "http://localhost:8080");
+            .define("packUrl", "http://localhost:8080/mods.zip");
 
     // Port for the file server
     private static final ModConfigSpec.ConfigValue<Integer> FILE_SERVER_PORT = BUILDER
