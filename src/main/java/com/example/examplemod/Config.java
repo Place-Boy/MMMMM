@@ -15,11 +15,11 @@ public class Config {
 
     private static final ModConfigSpec.ConfigValue<Integer> BUTTON_X = BUILDER
             .comment("Button X position")
-            .define("buttonX", -300);
+            .define("buttonX", -160);
 
     private static final ModConfigSpec.ConfigValue<Integer> BUTTON_Y = BUILDER
             .comment("Button Y position")
-            .define("buttonY", -150);
+            .define("buttonY", -235);
 
     // URL for modpack downloads or resource file hosting
     private static final ModConfigSpec.ConfigValue<String> PACK_URL = BUILDER

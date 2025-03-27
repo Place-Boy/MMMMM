@@ -32,7 +32,7 @@ public class ClientEventHandlers {
 
     private static final int CONNECTION_TIMEOUT_MS = 5000;
     private static final Path MOD_DOWNLOAD_PATH = Path.of("MMMMM/mods.zip");
-    private static final Path UNZIP_DESTINATION = Path.of("MMMMM/mods");
+    private static final Path UNZIP_DESTINATION = Path.of("mods");
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
     private static Button updateCheckButton;
 
