@@ -32,35 +32,8 @@ public class FileHostingServer {
 
         fileHostingServer.createContext("/", exchange -> {
             try {
-                // Log the incoming request URI
                 String requestPath = exchange.getRequestURI().getPath();
                 MMMMM.LOGGER.info("Received request: " + requestPath);
-
-                // Handle the root path ("/") request
-                if ("/".equals(requestPath)) {
-                    // Try serving a default index.html file
-                    Path defaultFile = FILE_DIRECTORY.resolve("index.html").normalize();
-
-                    if (Files.exists(defaultFile)) {
-                        MMMMM.LOGGER.info("Serving default file: " + defaultFile);
-                        byte[] defaultFileBytes = Files.readAllBytes(defaultFile);
-                        exchange.getResponseHeaders().add("Content-Type", "text/html");
-                        exchange.sendResponseHeaders(200, defaultFileBytes.length);
-                        exchange.getResponseBody().write(defaultFileBytes);
-                    } else {
-                        // Generate and serve a directory listing if index.html is not found
-                        MMMMM.LOGGER.info("Generating directory listing for root request.");
-                        String fileList = Files.list(FILE_DIRECTORY)
-                                .map(path -> "<li><a href=\"/" + path.getFileName() + "\">" + path.getFileName() + "</a></li>")
-                                .collect(Collectors.joining());
-                        String html = "<html><body><h1>Available Files</h1><ul>" + fileList + "</ul></body></html>";
-                        byte[] htmlBytes = html.getBytes();
-                        exchange.getResponseHeaders().add("Content-Type", "text/html");
-                        exchange.sendResponseHeaders(200, htmlBytes.length);
-                        exchange.getResponseBody().write(htmlBytes);
-                    }
-                    return; // Exit after handling root path
-                }
 
                 // Resolve the requested file path
                 Path filePath = FILE_DIRECTORY.resolve(requestPath.substring(1)).normalize();
@@ -79,16 +52,18 @@ public class FileHostingServer {
                     return;
                 }
 
+                // Set Content-Type based on file extension
+                String contentType = requestPath.endsWith(".zip") ? "application/zip" : "application/octet-stream";
+                exchange.getResponseHeaders().add("Content-Type", contentType);
+
                 // Read the file and write it to the HTTP response
                 byte[] fileBytes = Files.readAllBytes(filePath);
-                exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
                 exchange.sendResponseHeaders(200, fileBytes.length);
                 exchange.getResponseBody().write(fileBytes);
 
                 MMMMM.LOGGER.info("Successfully served file: " + filePath);
 
             } catch (Exception e) {
-                // Handle unexpected errors gracefully
                 MMMMM.LOGGER.error("Error processing request", e);
                 try {
                     exchange.sendResponseHeaders(500, -1); // Internal Server Error
@@ -96,7 +71,6 @@ public class FileHostingServer {
                     MMMMM.LOGGER.error("Failed to send error response", ioException);
                 }
             } finally {
-                // Ensure the exchange is always closed to release resources
                 exchange.close();
             }
         });

@@ -37,7 +37,7 @@ import java.util.zip.ZipInputStream;
 public class ClientEventHandlers {
 
     private static final int CONNECTION_TIMEOUT_MS = 5000;
-    private static final Path MOD_DOWNLOAD_PATH = Path.of("MMMMM/mods.zip");
+    private static final Path MOD_DOWNLOAD_PATH = Path.of("MMMMM/shared-files/mods.zip");
     private static final Path UNZIP_DESTINATION = Path.of("mods");
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
     private static final List<Button> serverButtons = new ArrayList<>();
@@ -90,7 +90,13 @@ public class ClientEventHandlers {
 
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
-                String modsUrl = "http://" + serverIP + "/mods.zip";
+                // Check if serverIP already contains a port
+                String modsUrl;
+                if (serverIP.contains(":")) {
+                    modsUrl = "http://" + serverIP + "/mods.zip";
+                } else {
+                    modsUrl = "http://" + serverIP + ":" + Config.fileServerPort + "/mods.zip";
+                }
                 LOGGER.info("Starting mod download from: {}", modsUrl);
 
                 HttpURLConnection connection = initializeConnection(modsUrl);
@@ -101,11 +107,6 @@ public class ClientEventHandlers {
                 // Verify the file exists
                 if (!Files.exists(MOD_DOWNLOAD_PATH)) {
                     throw new IOException("Downloaded file not found: " + MOD_DOWNLOAD_PATH);
-                }
-
-                // Verify the file size
-                if (Files.size(MOD_DOWNLOAD_PATH) == 0) {
-                    throw new IOException("Downloaded file is empty: " + MOD_DOWNLOAD_PATH);
                 }
 
                 // Create destination directory if it doesn't exist
@@ -153,15 +154,18 @@ public class ClientEventHandlers {
         return connection;
     }
 
-    private static void downloadFile(HttpURLConnection connection, Path destination) throws Exception {
+    private static void downloadFile(HttpURLConnection connection, Path destination) throws IOException {
+        // Ensure the parent directories exist
+        Files.createDirectories(destination.getParent());
+
+        // Download and save the file
         try (InputStream in = connection.getInputStream()) {
             Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
-            LOGGER.info("File downloaded successfully to: {}", destination);
+        }
 
-            // Verify file size
-            if (Files.size(destination) == 0) {
-                throw new IOException("Downloaded file is empty.");
-            }
+        // Verify file size
+        if (Files.size(destination) == 0) {
+            throw new IOException("Downloaded file is empty.");
         }
     }
 
