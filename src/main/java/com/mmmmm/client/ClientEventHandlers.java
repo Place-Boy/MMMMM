@@ -1,9 +1,11 @@
 package com.mmmmm.client;
 
+import com.mmmmm.Checksum;
 import com.mmmmm.Config;
 import com.mmmmm.MMMMM;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
@@ -25,6 +27,8 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * Handles client-side events for ExampleMod.
@@ -76,32 +80,58 @@ public class ClientEventHandlers {
     /**
      * Handles mod downloading and processing for a specific server.
      */
+    private static final Path CHECKSUM_FILE = Path.of("MMMMM/mods_checksums.json");
+
     private static void downloadAndProcessMod(String serverIP) {
+        Minecraft minecraft = Minecraft.getInstance();
+        DownloadProgressScreen progressScreen = new DownloadProgressScreen(serverIP);
+        TitleScreen titleScreen = new TitleScreen();
+        minecraft.setScreen(progressScreen);
+
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
                 String modsUrl = "http://" + serverIP + "/mods.zip";
                 LOGGER.info("Starting mod download from: {}", modsUrl);
 
                 HttpURLConnection connection = initializeConnection(modsUrl);
+
+                // Download the file
                 downloadFile(connection, MOD_DOWNLOAD_PATH);
 
-                if (Files.size(MOD_DOWNLOAD_PATH) == 0) {
-                    LOGGER.error("Downloaded ZIP file is empty: {}", MOD_DOWNLOAD_PATH);
-                    throw new IOException("The downloaded mods file is empty!");
+                // Verify the file exists
+                if (!Files.exists(MOD_DOWNLOAD_PATH)) {
+                    throw new IOException("Downloaded file not found: " + MOD_DOWNLOAD_PATH);
                 }
 
-                LOGGER.info("Downloaded ZIP file size: {} bytes", Files.size(MOD_DOWNLOAD_PATH));
+                // Verify the file size
+                if (Files.size(MOD_DOWNLOAD_PATH) == 0) {
+                    throw new IOException("Downloaded file is empty: " + MOD_DOWNLOAD_PATH);
+                }
 
+                // Create destination directory if it doesn't exist
                 if (!Files.exists(UNZIP_DESTINATION)) {
                     Files.createDirectories(UNZIP_DESTINATION);
                 }
 
-                zipIn(MOD_DOWNLOAD_PATH, UNZIP_DESTINATION);
-                sendPlayerMessage("Mods downloaded and extracted successfully for " + serverIP + "!");
+                // Compare checksums before extraction
+                if (Files.exists(CHECKSUM_FILE)) {
+                    LOGGER.info("Comparing checksums...");
+                    Checksum.compareChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
+                }
 
+                // Extract the ZIP file
+                zipIn(MOD_DOWNLOAD_PATH, UNZIP_DESTINATION);
+
+                // Save updated checksums
+                LOGGER.info("Saving updated checksums...");
+                Checksum.saveChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
+
+                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverIP + "!");
             } catch (Exception e) {
                 LOGGER.error("Failed to download or extract mods", e);
                 sendPlayerMessage("Failed to download or extract mods for " + serverIP + ". Check logs for more details.");
+            } finally {
+                minecraft.execute(() -> minecraft.setScreen(titleScreen));
             }
         });
     }
@@ -127,14 +157,19 @@ public class ClientEventHandlers {
         try (InputStream in = connection.getInputStream()) {
             Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
             LOGGER.info("File downloaded successfully to: {}", destination);
+
+            // Verify file size
+            if (Files.size(destination) == 0) {
+                throw new IOException("Downloaded file is empty.");
+            }
         }
     }
 
     private static void zipIn(Path zipFilePath, Path destinationPath) throws Exception {
         try (InputStream fileInputStream = Files.newInputStream(zipFilePath);
-             java.util.zip.ZipInputStream zipInputStream = new java.util.zip.ZipInputStream(fileInputStream)) {
+             ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
 
-            java.util.zip.ZipEntry entry;
+            ZipEntry entry;
             while ((entry = zipInputStream.getNextEntry()) != null) {
                 // Remove the root directory from the entry name
                 String entryName = entry.getName();
