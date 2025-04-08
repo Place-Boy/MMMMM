@@ -1,5 +1,6 @@
 package com.mmmmm.server;
 
+import com.mmmmm.Config;
 import com.mmmmm.MMMMM;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -14,7 +15,7 @@ import java.util.stream.Collectors;
 public class FileHostingServer {
 
     private static HttpServer fileHostingServer;
-    public static final int FILE_SERVER_PORT = 8080;
+    public static final int FILE_SERVER_PORT = Config.fileServerPort;
     public static final Path FILE_DIRECTORY = Path.of("MMMMM/shared-files");
 
     /**

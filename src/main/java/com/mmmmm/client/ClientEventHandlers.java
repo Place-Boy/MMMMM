@@ -79,7 +79,7 @@ public class ClientEventHandlers {
     private static void downloadAndProcessMod(String serverIP) {
         Executors.newSingleThreadExecutor().execute(() -> {
             try {
-                String modsUrl = serverIP + "/mods.zip";
+                String modsUrl = "http://" + serverIP + "/mods.zip";
                 LOGGER.info("Starting mod download from: {}", modsUrl);
 
                 HttpURLConnection connection = initializeConnection(modsUrl);
@@ -136,7 +136,18 @@ public class ClientEventHandlers {
 
             java.util.zip.ZipEntry entry;
             while ((entry = zipInputStream.getNextEntry()) != null) {
-                Path entryPath = destinationPath.resolve(entry.getName()).normalize();
+                // Remove the root directory from the entry name
+                String entryName = entry.getName();
+                if (entryName.contains("/")) {
+                    entryName = entryName.substring(entryName.indexOf("/") + 1);
+                }
+
+                if (entryName.isEmpty()) {
+                    zipInputStream.closeEntry();
+                    continue;
+                }
+
+                Path entryPath = destinationPath.resolve(entryName).normalize();
                 if (!entryPath.startsWith(destinationPath)) {
                     throw new IOException("Invalid ZIP entry attempting to escape destination: " + entry.getName());
                 }
