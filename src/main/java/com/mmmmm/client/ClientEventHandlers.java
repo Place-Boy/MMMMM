@@ -53,7 +53,7 @@ public class ClientEventHandlers {
             ServerList serverList = new ServerList(Minecraft.getInstance());
             serverList.load();
 
-            int buttonX = screen.width - 160; // Position buttons on the right side
+            int buttonX = screen.width - 55; // Position buttons on the right side
             int buttonY = 50;
             int buttonSpacing = 24;
             int maxHeight = screen.height - 50; // Keep buttons within screen height
@@ -66,10 +66,10 @@ public class ClientEventHandlers {
                 Button serverButton = Button.builder(
                         Component.literal("Update " + server.name),
                         (btn) -> {
-                            LOGGER.info("Update button clicked for server: {}", server.name);
+                            LOGGER.info("Update");
                             downloadAndProcessMod(server.name);
                         }
-                ).bounds(buttonX, yOffset, 150, 20).build();
+                ).bounds(buttonX, yOffset, 50, 20).build();
 
                 event.addListener(serverButton);
                 serverButtons.add(serverButton);
