@@ -101,8 +101,8 @@ public class ClientEventHandlers {
 
                 HttpURLConnection connection = initializeConnection(modsUrl);
 
-                // Download the file
-                downloadFile(connection, MOD_DOWNLOAD_PATH);
+                // Download the file with progress updates
+                downloadFileWithProgress(connection, MOD_DOWNLOAD_PATH, progressScreen);
 
                 // Verify the file exists
                 if (!Files.exists(MOD_DOWNLOAD_PATH)) {
@@ -154,13 +154,50 @@ public class ClientEventHandlers {
         return connection;
     }
 
-    private static void downloadFile(HttpURLConnection connection, Path destination) throws IOException {
+    private static void downloadFileWithProgress(HttpURLConnection connection, Path destination, DownloadProgressScreen progressScreen) throws IOException {
         // Ensure the parent directories exist
         Files.createDirectories(destination.getParent());
 
+        long totalBytes = connection.getContentLengthLong();
+        java.util.concurrent.atomic.AtomicLong bytesRead = new java.util.concurrent.atomic.AtomicLong(0);
+        long startTime = System.currentTimeMillis();
+        long lastUpdateTime = startTime;
+        long bytesReadInInterval = 0;
+
         // Download and save the file
         try (InputStream in = connection.getInputStream()) {
-            Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
+            byte[] buffer = new byte[8192];
+            int read;
+            Files.deleteIfExists(destination); // Ensure no leftover file
+            try (var out = Files.newOutputStream(destination)) {
+                while ((read = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, read);
+                    bytesRead.addAndGet(read);
+                    bytesReadInInterval += read;
+
+                    // Calculate elapsed time and speed
+                    long currentTime = System.currentTimeMillis();
+                    long elapsedTime = currentTime - lastUpdateTime;
+                    if (elapsedTime >= 200) { // Update every 200ms
+                        double speedInKB = (bytesReadInInterval / 1024.0) / (elapsedTime / 1000.0); // KB/s
+                        lastUpdateTime = currentTime;
+                        bytesReadInInterval = 0; // Reset interval counter
+
+                        // Format speed
+                        String speedText;
+                        if (speedInKB >= 1024) {
+                            double speedInMB = speedInKB / 1024.0;
+                            speedText = String.format("%.2f MB/s", speedInMB);
+                        } else {
+                            speedText = String.format("%.2f KB/s", speedInKB);
+                        }
+
+                        // Update progress and speed
+                        int progress = (int) ((bytesRead.get() * 100) / totalBytes);
+                        Minecraft.getInstance().execute(() -> progressScreen.updateProgress(progress, speedText));
+                    }
+                }
+            }
         }
 
         // Verify file size
