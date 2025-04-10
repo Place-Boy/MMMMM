@@ -23,7 +23,7 @@ license="${mod_license}"
 modId="mmmmm" #mandatory
 
 # The version number of the mod
-version="0.0.1-pre-release" #mandatory
+version="0.0.2-pre-release" #mandatory
 
 # A display name for the mod
 displayName="MMMMM" #mandatory
