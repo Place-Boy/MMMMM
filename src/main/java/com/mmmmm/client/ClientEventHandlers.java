@@ -64,7 +64,7 @@ public class ClientEventHandlers {
 
                 ServerData server = serverList.get(i);
                 Button serverButton = Button.builder(
-                        Component.literal("Update " + server.name),
+                        Component.literal("Update"),
                         (btn) -> {
                             LOGGER.info("Update");
                             downloadAndProcessMod(server.name);
