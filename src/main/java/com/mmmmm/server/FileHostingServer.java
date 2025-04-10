@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Collectors;
 
 /**
  * Manages the file hosting server for ExampleMod.
@@ -19,7 +18,7 @@ public class FileHostingServer {
     public static final Path FILE_DIRECTORY = Path.of("MMMMM/shared-files");
 
     /**
-     * Starts the file hosting server.
+     * Starts the file hosting server on a separate thread.
      */
     public static void start() throws IOException {
         // Create the shared-files directory if it does not exist
@@ -75,9 +74,11 @@ public class FileHostingServer {
             }
         });
 
-        // Start the server
-        fileHostingServer.start();
-        MMMMM.LOGGER.info("File hosting server started on port " + FILE_SERVER_PORT);
+        // Start the server on a separate thread
+        new Thread(() -> {
+            fileHostingServer.start();
+            MMMMM.LOGGER.info("File hosting server started on port " + FILE_SERVER_PORT);
+        }).start();
     }
 
     /**
