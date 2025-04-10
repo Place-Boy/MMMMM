@@ -133,6 +133,7 @@ public class ClientEventHandlers {
                 sendPlayerMessage("Failed to download or extract mods for " + serverIP + ". Check logs for more details.");
             } finally {
                 minecraft.execute(() -> minecraft.setScreen(titleScreen));
+                Executors.newSingleThreadExecutor().shutdown();
             }
         });
     }
@@ -155,7 +156,6 @@ public class ClientEventHandlers {
     }
 
     private static void downloadFileWithProgress(HttpURLConnection connection, Path destination, DownloadProgressScreen progressScreen) throws IOException {
-        // Ensure the parent directories exist
         Files.createDirectories(destination.getParent());
 
         long totalBytes = connection.getContentLengthLong();
@@ -164,44 +164,45 @@ public class ClientEventHandlers {
         long lastUpdateTime = startTime;
         long bytesReadInInterval = 0;
 
-        // Download and save the file
         try (InputStream in = connection.getInputStream()) {
             byte[] buffer = new byte[8192];
             int read;
             Files.deleteIfExists(destination); // Ensure no leftover file
             try (var out = Files.newOutputStream(destination)) {
                 while ((read = in.read(buffer)) != -1) {
+                    if (progressScreen.isCancelled()) { // Check for cancellation
+                        throw new IOException("Download cancelled by user.");
+                    }
+
                     out.write(buffer, 0, read);
                     bytesRead.addAndGet(read);
                     bytesReadInInterval += read;
 
-                    // Calculate elapsed time and speed
                     long currentTime = System.currentTimeMillis();
                     long elapsedTime = currentTime - lastUpdateTime;
-                    if (elapsedTime >= 200) { // Update every 200ms
-                        double speedInKB = (bytesReadInInterval / 1024.0) / (elapsedTime / 1000.0); // KB/s
+                    if (elapsedTime >= 200) {
+                        double speedInKB = (bytesReadInInterval / 1024.0) / (elapsedTime / 1000.0);
                         lastUpdateTime = currentTime;
-                        bytesReadInInterval = 0; // Reset interval counter
+                        bytesReadInInterval = 0;
 
-                        // Format speed
-                        String speedText;
-                        if (speedInKB >= 1024) {
-                            double speedInMB = speedInKB / 1024.0;
-                            speedText = String.format("%.2f MB/s", speedInMB);
-                        } else {
-                            speedText = String.format("%.2f KB/s", speedInKB);
-                        }
+                        String speedText = speedInKB >= 1024
+                                ? String.format("%.2f MB/s", speedInKB / 1024.0)
+                                : String.format("%.2f KB/s", speedInKB);
 
-                        // Update progress and speed
                         int progress = (int) ((bytesRead.get() * 100) / totalBytes);
                         Minecraft.getInstance().execute(() -> progressScreen.updateProgress(progress, speedText));
                     }
                 }
             }
+        } catch (Exception e) {
+            // Delete the partially downloaded file if an error occurs
+            Files.deleteIfExists(destination);
+            throw e; // Re-throw the exception to handle it upstream
         }
 
         // Verify file size
         if (Files.size(destination) == 0) {
+            Files.deleteIfExists(destination); // Delete empty file
             throw new IOException("Downloaded file is empty.");
         }
     }
