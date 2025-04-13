@@ -3,8 +3,10 @@ package com.mmmmm.client;
 import com.mmmmm.Checksum;
 import com.mmmmm.Config;
 import com.mmmmm.MMMMM;
+import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.EditServerScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.multiplayer.ServerData;
@@ -41,6 +43,29 @@ public class ClientEventHandlers {
     private static final Path UNZIP_DESTINATION = Path.of("mods");
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
     private static final List<Button> serverButtons = new ArrayList<>();
+
+
+    @SubscribeEvent
+    public static void onGuiInit(Post event) {
+        if (event.getScreen() instanceof EditServerScreen screen) {
+            Minecraft.getInstance().setScreen(EditServerScreen);
+            ServerData serverData = screen.getServerData(); // Retrieve the server data from the existing screen
+            BooleanConsumer callback = (result) -> {
+                // Handle the result of the screen (e.g., save or cancel)
+                if (result) {
+                    // Save the server data
+                    ServerList serverList = new ServerList(Minecraft.getInstance());
+                    serverList.load();
+                    serverList.add(serverData, true);
+                    serverList.save();
+                } else {
+                    // Cancel the operation
+                    Minecraft.getInstance().setScreen(screen);
+                }
+            };
+            Minecraft.getInstance().setScreen(new ServerAddEditScreen(screen, callback, serverData));
+        }
+    }
 
     /**
      * Adds custom buttons for each server in the server list on the multiplayer screen.
