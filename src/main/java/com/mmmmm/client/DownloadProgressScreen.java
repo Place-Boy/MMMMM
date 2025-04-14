@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 
 public class DownloadProgressScreen extends Screen {
 
-    private final String serverIP;
+    private final String serverUpdateIP; // Use the correct server update IP
     private int progress = 0; // Progress percentage (0-100)
     private String downloadSpeed = "0 KB/s"; // Download speed
     private Button cancelButton; // Cancel button
@@ -16,7 +16,7 @@ public class DownloadProgressScreen extends Screen {
 
     public DownloadProgressScreen(String serverIP) {
         super(Component.literal("Downloading Mods"));
-        this.serverIP = serverIP;
+        this.serverUpdateIP = serverIP; // Set the correct server update IP
     }
 
     private volatile boolean isCancelled = false;
@@ -51,8 +51,9 @@ public class DownloadProgressScreen extends Screen {
 
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
 
-        // Draw the title
-        guiGraphics.drawCenteredString(this.font, "Downloading mods from " + serverIP, this.width / 2, 20, 0xFFFFFF);
+        // Draw the title with the correct server update IP
+        guiGraphics.drawCenteredString(this.font, "Downloading mods from " + serverUpdateIP, this.width / 2, 20, 0xFFFFFF);
+
 
         // Draw the download speed above the progress bar
         int barWidth = 200;
