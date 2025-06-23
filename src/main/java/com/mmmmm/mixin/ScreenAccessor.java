@@ -14,4 +14,3 @@ public interface ScreenAccessorMixin {
     @Invoker("addRenderableWidget")
     <T extends GuiEventListener & Renderable & NarratableEntry> T invokeAddRenderableWidget(T widget);
 }
-
