@@ -26,7 +26,6 @@ public class MMMMM {
 
         // Register configuration
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
-
         LOGGER.info("MMMMM initialized.");
 
         MinecraftForge.EVENT_BUS.addListener(RegisterCommands::onRegisterCommands);

@@ -17,6 +17,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(EditServerScreen.class)
 public abstract class EditServerScreenMixin {
 
+    static {
+        MMMMM.LOGGER.info("EditServerScreenMixin initialized.");
+    }
     @Shadow public abstract void onClose();
 
     private int[] labelYPositions = new int[2]; // 0 = Server Name Y, 1 = Server Address Y

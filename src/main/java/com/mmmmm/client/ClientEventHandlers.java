@@ -41,6 +41,7 @@ public class ClientEventHandlers {
 
     @SubscribeEvent
     public static void onMultiplayerScreenInit(ScreenEvent.Init.Post event) {
+        LOGGER.info("onMultiplayerScreenInit fired"); // At start of onMultiplayerScreenInit
         if (!(event.getScreen() instanceof JoinMultiplayerScreen screen)) {
             return;
         }
@@ -61,11 +62,16 @@ public class ClientEventHandlers {
             ServerData server = serverList.get(i);
             Button serverButton = createServerButton(buttonX, yOffset, server);
             event.addListener(serverButton);
+            LOGGER.info("Button added to screen: {}", event.getScreen().getClass().getName());
             serverButtons.add(serverButton);
+        }
+        for (Object child : event.getScreen().children()) {
+            LOGGER.info("Widget: {} at {}", child.getClass().getName(), child);
         }
     }
 
     private static Button createServerButton(int x, int y, ServerData server) {
+        LOGGER.info("Creating button for server: {}", server.ip); // In createServerButton
         return Button.builder(
                 Component.literal("Update"),
                 (btn) -> {

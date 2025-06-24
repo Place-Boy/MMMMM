@@ -45,7 +45,7 @@ authors="Place_Bo" #optional
 description='''A mod that updates client packs from a minecraft server'''
 
 
-mixins = "mixin/mmmmm.json"
+mixins="mmmmm.mixin.json"
 
 # A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
 [[dependencies.mmmmm]] #optional
