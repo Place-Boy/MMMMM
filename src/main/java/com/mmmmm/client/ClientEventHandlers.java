@@ -2,6 +2,7 @@ package com.mmmmm.client;
 
 import com.mmmmm.Checksum;
 import com.mmmmm.MMMMM;
+import com.mmmmm.mixin.ScreenAccessorMixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -64,6 +65,9 @@ public class ClientEventHandlers {
             event.addListener(serverButton);
             LOGGER.info("Button added to screen: {}", event.getScreen().getClass().getName());
             serverButtons.add(serverButton);
+        }
+        for (Button btn : serverButtons) {
+            ((ScreenAccessorMixin) screen).invokeAddRenderableWidget(btn);
         }
         for (Object child : event.getScreen().children()) {
             LOGGER.info("Widget: {} at {}", child.getClass().getName(), child);
