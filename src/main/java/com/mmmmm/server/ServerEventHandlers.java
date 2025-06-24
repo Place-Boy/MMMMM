@@ -1,10 +1,10 @@
 package com.mmmmm.server;
 
 import com.mmmmm.MMMMM;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
 /**
  * Handles server-side events.

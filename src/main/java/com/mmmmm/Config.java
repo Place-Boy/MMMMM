@@ -1,9 +1,9 @@
 package com.mmmmm;
 
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
-import net.minecraftforge.common.ForgeConfigSpec;
 
 /**
  * Config class to handle mod settings and updates.
