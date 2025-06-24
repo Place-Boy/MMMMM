@@ -1,9 +1,12 @@
 package com.mmmmm;
 
+import com.mmmmm.server.FileHostingServer;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
+
+import java.io.IOException;
 
 /**
  * Config class to handle mod settings and updates.
@@ -13,7 +16,7 @@ public class Config {
 
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
-    private static final ForgeConfigSpec.ConfigValue<Integer> FILE_SERVER_PORT = BUILDER
+    public static final ForgeConfigSpec.ConfigValue<Integer> FILE_SERVER_PORT = BUILDER
             .comment("Port number for the file server to run on. Default: 8080")
             .define("fileServerPort", 8080);
 
@@ -30,16 +33,16 @@ public class Config {
      */
     @SubscribeEvent
     public static void onLoad(final ModConfigEvent event) {
-        // Ensure the correct config type (COMMON) is loaded.
-        if (!event.getConfig().getSpec().equals(SPEC)) {
-            return;
+        if (!event.getConfig().getSpec().equals(Config.SPEC)) return;
+
+        Config.fileServerPort = Config.FILE_SERVER_PORT.get();
+        MMMMM.LOGGER.info("Config loaded - fileServerPort = {}", Config.fileServerPort);
+
+        try {
+            FileHostingServer.start();
+            MMMMM.LOGGER.info("Called FileHostingServer.start()");
+        } catch (IOException e) {
+            MMMMM.LOGGER.error("Failed to start file hosting server: ", e);
         }
-
-        // Update static values with configuration values
-        fileServerPort = FILE_SERVER_PORT.get();
-
-        // Log configuration load
-        MMMMM.LOGGER.info("Configuration loaded:");
-        MMMMM.LOGGER.info("File Server Port: {}", fileServerPort);
     }
 }

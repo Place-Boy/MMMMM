@@ -56,25 +56,25 @@ public class ClientEventHandlers {
         int buttonSpacing = 24;
         int maxHeight = screen.height - 50;
 
+        List<Button> buttonsToAdd = new ArrayList<>();
+
+
         for (int i = 0; i < serverList.size(); i++) {
             int yOffset = buttonY + (i * buttonSpacing);
             if (yOffset + 20 > maxHeight) break;
 
             ServerData server = serverList.get(i);
             Button serverButton = createServerButton(buttonX, yOffset, server);
-            event.addListener(serverButton);
+            buttonsToAdd.add(serverButton);
             LOGGER.info("Button added to screen: {}", event.getScreen().getClass().getName());
-            serverButtons.add(serverButton);
         }
-        for (Button btn : serverButtons) {
-            ((ScreenAccessorMixin) screen).invokeAddRenderableWidget(btn);
-        }
-        for (Object child : event.getScreen().children()) {
-            LOGGER.info("Widget: {} at {}", child.getClass().getName(), child);
+        // Add all buttons last, after all other widgets
+        for (Button button : buttonsToAdd) {
+            LOGGER.info("Button added to screen: {}", event.getScreen().getClass().getName());
         }
     }
 
-    private static Button createServerButton(int x, int y, ServerData server) {
+    public static Button createServerButton(int x, int y, ServerData server) {
         LOGGER.info("Creating button for server: {}", server.ip); // In createServerButton
         return Button.builder(
                 Component.literal("Update"),

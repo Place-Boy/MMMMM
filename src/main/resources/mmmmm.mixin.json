@@ -5,7 +5,8 @@
   "mixins": [
     "EditServerScreenMixin",
     "EditServerScreenAccessor",
-    "ScreenAccessorMixin"
+    "ScreenAccessorMixin",
+    "JoinMultiplayerScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
