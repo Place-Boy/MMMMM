@@ -1,11 +1,12 @@
 {
   "required": true,
+  "minVersion": "0.8.5",
   "package": "com.mmmmm.mixin",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [
+  "client": [
+    "ScreenAccessorMixin",
     "EditServerScreenMixin",
     "EditServerScreenAccessor",
-    "ScreenAccessorMixin",
     "JoinMultiplayerScreenMixin"
   ],
   "injectors": {

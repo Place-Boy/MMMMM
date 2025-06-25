@@ -2,7 +2,6 @@ package com.mmmmm.client;
 
 import com.mmmmm.Checksum;
 import com.mmmmm.MMMMM;
-import com.mmmmm.mixin.ScreenAccessorMixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.TitleScreen;

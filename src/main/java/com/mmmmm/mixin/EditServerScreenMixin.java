@@ -64,8 +64,7 @@ public abstract class EditServerScreenMixin {
         if (!existingMetadata.isBlank()) {
             customField.setValue(existingMetadata);
         }
-
-        ((ScreenAccessorMixin) (Object) this).invokeAddRenderableWidget(customField);
+        ((ScreenAccessorMixin)(Object)this).callAddRenderableWidget(customField);
     }
 
     @Inject(method = "onAdd", at = @At("TAIL"))

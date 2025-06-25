@@ -44,6 +44,7 @@ authors="Place_Bo" #optional
 # The description text for the mod (multi line!) (#mandatory)
 description='''A mod that updates client packs from a minecraft server'''
 
+configBackground = "common"
 
 mixins="mmmmm.mixin.json"
 

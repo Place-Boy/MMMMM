@@ -2,7 +2,6 @@ package com.mmmmm.mixin;
 
 import com.mmmmm.MMMMM;
 import com.mmmmm.client.ClientEventHandlers;
-import com.mmmmm.mixin.ScreenAccessorMixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
@@ -48,7 +47,7 @@ public abstract class JoinMultiplayerScreenMixin {
             buttonsToAdd.add(serverButton);
         }
         for (Button button : buttonsToAdd) {
-            ((ScreenAccessorMixin) screen).invokeAddRenderableWidget(button);
+            ((ScreenAccessorMixin)screen).callAddRenderableWidget(button);
             MMMMM.LOGGER.info("Button added to JoinMultiplayerScreen via mixin");
             ((List<net.minecraft.client.gui.components.events.GuiEventListener>) screen.children()).add((net.minecraft.client.gui.components.events.GuiEventListener) button);
         }

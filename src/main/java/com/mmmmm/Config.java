@@ -1,48 +1,45 @@
 package com.mmmmm;
 
-import com.mmmmm.server.FileHostingServer;
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 
-import java.io.IOException;
-
-/**
- * Config class to handle mod settings and updates.
- */
-@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.MOD)
 public class Config {
 
-    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> FILE_SERVER_PORT = BUILDER
-            .comment("Port number for the file server to run on. Default: 8080")
-            .define("fileServerPort", 8080);
+    public static final ForgeConfigSpec.IntValue FILE_SERVER_PORT = BUILDER
+            .comment("Port number for the file server to run on", "Default: 8080")
+            .defineInRange("fileServerPort", 8080, 1, 65535);
 
-    /**
-     * Compile the final specification.
-     */
     public static final ForgeConfigSpec SPEC = BUILDER.build();
 
     public static int fileServerPort;
 
-    /**
-     * Called when the configuration is loaded or updated. This ensures runtime
-     * variables always hold accurate, current values.
-     */
-    @SubscribeEvent
-    public static void onLoad(final ModConfigEvent event) {
-        if (!event.getConfig().getSpec().equals(Config.SPEC)) return;
+    static {
+        MMMMM.LOGGER.info("Config class static block executed.");
+    }
 
-        Config.fileServerPort = Config.FILE_SERVER_PORT.get();
-        MMMMM.LOGGER.info("Config loaded - fileServerPort = {}", Config.fileServerPort);
-
-        try {
-            FileHostingServer.start();
-            MMMMM.LOGGER.info("Called FileHostingServer.start()");
-        } catch (IOException e) {
-            MMMMM.LOGGER.error("Failed to start file hosting server: ", e);
+    public static void onLoad(ModConfigEvent.Loading event) {
+        MMMMM.LOGGER.info("onLoad fired for mod ID: {}", event.getConfig().getModId());
+        MMMMM.LOGGER.info("Received config spec hash: {}", event.getConfig().getSpec().hashCode());
+        if (event.getConfig().getSpec() != SPEC) {
+            MMMMM.LOGGER.info("Config load skipped - not our spec.");
+            return;
         }
+        fileServerPort = FILE_SERVER_PORT.get();
+        MMMMM.LOGGER.info("Configuration loaded:");
+        MMMMM.LOGGER.info("File Server Port: {}", fileServerPort);
+    }
+
+    public static void onReload(ModConfigEvent.Reloading event) {
+        MMMMM.LOGGER.info("onReload fired for mod ID: {}", event.getConfig().getModId());
+        MMMMM.LOGGER.info("Received config spec hash: {}", event.getConfig().getSpec().hashCode());
+        if (event.getConfig().getSpec() != SPEC) {
+            MMMMM.LOGGER.info("Config reload skipped - not our spec.");
+            return;
+        }
+        fileServerPort = FILE_SERVER_PORT.get();
+        MMMMM.LOGGER.info("Configuration reloaded:");
+        MMMMM.LOGGER.info("File Server Port: {}", fileServerPort);
     }
 }

@@ -1,37 +1,17 @@
 package com.mmmmm.server;
 
-import com.mmmmm.Config;
 import com.mmmmm.MMMMM;
 import com.sun.net.httpserver.HttpServer;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
-
+import com.mmmmm.Config;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.MOD)
 public class FileHostingServer {
 
     private static HttpServer fileHostingServer;
     public static final Path FILE_DIRECTORY = Path.of("MMMMM/shared-files");
-
-    @SubscribeEvent
-    public static void onLoad(final ModConfigEvent event) {
-        if (!event.getConfig().getSpec().equals(Config.SPEC)) return;
-
-        Config.fileServerPort = Config.FILE_SERVER_PORT.get();
-        MMMMM.LOGGER.info("Config loaded - fileServerPort = {}", Config.fileServerPort);
-
-        try {
-            FileHostingServer.start();
-            MMMMM.LOGGER.info("Called FileHostingServer.start()");
-        } catch (IOException e) {
-            MMMMM.LOGGER.error("Failed to start file hosting server: ", e);
-        }
-    }
 
     public static void start() throws IOException {
         MMMMM.LOGGER.info("FileHostingServer.start() called with port: {}", Config.fileServerPort);
@@ -53,7 +33,48 @@ public class FileHostingServer {
         fileHostingServer = HttpServer.create(new InetSocketAddress(Config.fileServerPort), 0);
 
         fileHostingServer.createContext("/", exchange -> {
-            // Your existing request handling code...
+            try {
+                String requestPath = exchange.getRequestURI().getPath();
+                MMMMM.LOGGER.info("Received request: " + requestPath);
+
+                // Resolve the requested file path
+                Path filePath = FILE_DIRECTORY.resolve(requestPath.substring(1)).normalize();
+
+                // Security: Ensure the resolved file path is within the allowed directory
+                if (!filePath.startsWith(FILE_DIRECTORY)) {
+                    MMMMM.LOGGER.warn("Unauthorized access attempt: " + filePath);
+                    exchange.sendResponseHeaders(403, -1); // Forbidden
+                    return;
+                }
+
+                // Check if the requested file exists
+                if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
+                    MMMMM.LOGGER.warn("File not found: " + filePath);
+                    exchange.sendResponseHeaders(404, -1); // Not Found
+                    return;
+                }
+
+                // Set Content-Type based on file extension
+                String contentType = requestPath.endsWith(".zip") ? "application/zip" : "application/octet-stream";
+                exchange.getResponseHeaders().add("Content-Type", contentType);
+
+                // Read the file and write it to the HTTP response
+                byte[] fileBytes = Files.readAllBytes(filePath);
+                exchange.sendResponseHeaders(200, fileBytes.length);
+                exchange.getResponseBody().write(fileBytes);
+
+                MMMMM.LOGGER.info("Successfully served file: " + filePath);
+
+            } catch (Exception e) {
+                MMMMM.LOGGER.error("Error processing request", e);
+                try {
+                    exchange.sendResponseHeaders(500, -1); // Internal Server Error
+                } catch (IOException ioException) {
+                    MMMMM.LOGGER.error("Failed to send error response", ioException);
+                }
+            } finally {
+                exchange.close();
+            }
         });
 
         new Thread(() -> {
