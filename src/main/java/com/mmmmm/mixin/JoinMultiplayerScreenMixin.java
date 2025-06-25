@@ -47,7 +47,7 @@ public abstract class JoinMultiplayerScreenMixin {
             buttonsToAdd.add(serverButton);
         }
         for (Button button : buttonsToAdd) {
-            ((ScreenAccessorMixin)screen).callAddRenderableWidget(button);
+            ((ScreenAccessorMixin)(Object)screen).addRenderableWidget(button);
             MMMMM.LOGGER.info("Button added to JoinMultiplayerScreen via mixin");
             ((List<net.minecraft.client.gui.components.events.GuiEventListener>) screen.children()).add((net.minecraft.client.gui.components.events.GuiEventListener) button);
         }

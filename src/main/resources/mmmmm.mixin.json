@@ -3,6 +3,7 @@
   "minVersion": "0.8.5",
   "package": "com.mmmmm.mixin",
   "compatibilityLevel": "JAVA_17",
+  "refmap": "mixin.refmap.json",
   "client": [
     "ScreenAccessorMixin",
     "EditServerScreenMixin",

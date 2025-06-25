@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Specification-Title: examplemod
+Specification-Vendor: YourNameHere, OtherNameHere
+Specification-Version: 1
+Implementation-Title: MMMMM
+Implementation-Version: 1.0.0
+Implementation-Vendor: YourNameHere, OtherNameHere
+Implementation-Timestamp: 2025-06-25T22:33:30+0100
+MixinConfigs: mmmmm.mixin.json
+
