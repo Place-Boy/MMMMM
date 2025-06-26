@@ -166,6 +166,7 @@ public class ClientEventHandlers {
             while ((bytesRead = in.read(buffer)) != -1) {
                 if (progressScreen.isCancelled()) {
                     LOGGER.info("Download cancelled by user.");
+                    Files.deleteIfExists(destination); // Delete the partially downloaded file
                     return;
                 }
 

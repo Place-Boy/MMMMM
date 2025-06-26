@@ -38,6 +38,12 @@ minecraft {
         config "mmmmm.mixin.json"
     }
 
+    sourceSets {
+        main {
+            ext.refMap = "mmmmm.refmap.json" // This is the name of the refmap file used by Mixin
+        }
+    }
+
     // When true, this property will have all Eclipse/IntelliJ IDEA run configurations run the "prepareX" task for the given run configuration before launching the game.
     // In most cases, it is not necessary to enable.
     // enableEclipsePrepareRuns = true
