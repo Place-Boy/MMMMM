@@ -7,6 +7,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(AddServerScreen.class)
 public interface EditServerScreenAccessor {
-    @Accessor("serverData")
+    @Accessor("server")
     ServerInfo getServerData();
 }

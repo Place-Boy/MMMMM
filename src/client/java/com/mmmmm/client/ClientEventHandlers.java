@@ -1,12 +1,9 @@
 package com.mmmmm.client;
 
 import com.mmmmm.Checksum;
-import com.mmmmm.client.DownloadProgressScreen;
-import com.mmmmm.client.ServerMetadata;
-
+import com.mmmmm.mixin.MultiplayerScreenAccessor;
+import com.mmmmm.mixin.ScreenAccessorMixin;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -14,13 +11,10 @@ import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.option.ServerList;
-
 import net.minecraft.text.Text;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -32,31 +26,41 @@ import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-
-
 public class ClientEventHandlers implements ClientModInitializer {
     private static final int CONNECTION_TIMEOUT_MS = 5000;
     private static final Path MOD_DOWNLOAD_PATH = Path.of("MMMMM/shared-files/mods.zip");
     private static final Path UNZIP_DESTINATION = Path.of("mods");
     private static final Path CHECKSUM_FILE = Path.of("MMMMM/mods_checksums.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
-    private static final List<Button> serverButtons = new ArrayList<>();
+    private static final List<ButtonWidget> serverButtons = new ArrayList<>();
+    private static Screen lastScreen = null;
 
     @Override
     public void onInitializeClient() {
-        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
-            if (screen instanceof MultiplayerScreen joinScreen) {
-                addUpdateButtons(joinScreen);
+        // Fallback: poll in a thread since ClientTickEvents is not available
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {}
+                MinecraftClient client = MinecraftClient.getInstance();
+                Screen current = client.currentScreen;
+                if (current instanceof MultiplayerScreen screen && lastScreen != screen) {
+                    lastScreen = screen;
+                    client.execute(() -> addUpdateButtons(screen));
+                } else if (!(current instanceof MultiplayerScreen)) {
+                    lastScreen = null;
+                }
             }
-        });
+        }, "mmmmm-multiplayer-poll").start();
     }
 
     private static void addUpdateButtons(MultiplayerScreen screen) {
         serverButtons.clear();
-        ServerList serverList = new ServerList(MinecraftClient.getInstance());
-        serverList.load();
+        ServerList serverList = ((MultiplayerScreenAccessor) screen).getServerList();
+        LOGGER.info("Injecting update buttons for {} servers", serverList.size());
 
-        int buttonX = screen.width - 55;
+        int buttonX = screen.width - 105; // Move left if needed
         int buttonY = 50;
         int buttonSpacing = 24;
         int maxHeight = screen.height - 50;
@@ -65,22 +69,23 @@ public class ClientEventHandlers implements ClientModInitializer {
             int yOffset = buttonY + (i * buttonSpacing);
             if (yOffset + 20 > maxHeight) break;
 
-            ServerInfo = serverList.get(i);
-            Button serverButton = createServerButton(buttonX, yOffset, server);
-            screen.addRenderableWidget(serverButton);
+            ServerInfo server = serverList.get(i);
+            ButtonWidget serverButton = createServerButton(buttonX, yOffset, server);
+            ((ScreenAccessorMixin) screen).invokeAddDrawableChild(serverButton);
             serverButtons.add(serverButton);
+            LOGGER.info("Added update button for server: {}", server.name);
         }
     }
 
-    private static Button createServerButton(int x, int y, ServerInfo server) {
-        return Button.builder(
-                Component.literal("Update"),
+    private static ButtonWidget createServerButton(int x, int y, ServerInfo server) {
+        return ButtonWidget.builder(
+                Text.literal("Update"),
                 (btn) -> {
-                    String serverUpdateIP = com.mmmmm.client.ServerMetadata.getMetadata(server.ip);
+                    String serverUpdateIP = ServerMetadata.getMetadata(server.address);
                     LOGGER.info("Update button clicked for server: {}", serverUpdateIP);
                     downloadAndProcessMod(serverUpdateIP);
                 }
-        ).bounds(x, y, 50, 20).build();
+        ).dimensions(x, y, 50, 20).build();
     }
 
     private static void downloadAndProcessMod(String serverUpdateIP) {
@@ -226,7 +231,7 @@ public class ClientEventHandlers implements ClientModInitializer {
 
     private static void sendPlayerMessage(String message) {
         if (MinecraftClient.getInstance().player != null) {
-            MinecraftClient.getInstance().player.sendSystemMessage(Component.literal(message));
+            MinecraftClient.getInstance().player.sendMessage(Text.literal(message));
         }
     }
 }
