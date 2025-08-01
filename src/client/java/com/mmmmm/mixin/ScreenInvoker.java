@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(Screen.class)
-public interface ScreenAccessorMixin {
+public interface ScreenInvoker {
     @Invoker("addDrawableChild")
-    <T extends Element & Drawable & Selectable> T invokeAddDrawableChild(T widget);
+    <T extends Element & Drawable & Selectable> T invokeAddDrawableChild(T drawable);
 }

@@ -13,5 +13,8 @@ public class ServerEventHandlers {
                 MMMMM.LOGGER.error("Failed to start file hosting server: ", e);
             }
         });
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            com.mmmmm.server.FileHostingServer.stop();
+        });
     }
 }

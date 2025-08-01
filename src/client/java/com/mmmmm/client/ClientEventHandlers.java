@@ -2,7 +2,7 @@ package com.mmmmm.client;
 
 import com.mmmmm.Checksum;
 import com.mmmmm.mixin.MultiplayerScreenAccessor;
-import com.mmmmm.mixin.ScreenAccessorMixin;
+import com.mmmmm.mixin.ScreenInvoker;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -60,18 +60,19 @@ public class ClientEventHandlers implements ClientModInitializer {
         ServerList serverList = ((MultiplayerScreenAccessor) screen).getServerList();
         LOGGER.info("Injecting update buttons for {} servers", serverList.size());
 
-        int buttonX = screen.width - 105; // Move left if needed
+        int buttonX = screen.width - 55;
         int buttonY = 50;
         int buttonSpacing = 24;
         int maxHeight = screen.height - 50;
+        int verticalOffset = -12; // Move button up by 2px
 
         for (int i = 0; i < serverList.size(); i++) {
-            int yOffset = buttonY + (i * buttonSpacing);
+            int yOffset = buttonY + (i * buttonSpacing) + verticalOffset;
             if (yOffset + 20 > maxHeight) break;
 
             ServerInfo server = serverList.get(i);
             ButtonWidget serverButton = createServerButton(buttonX, yOffset, server);
-            ((ScreenAccessorMixin) screen).invokeAddDrawableChild(serverButton);
+            ((ScreenInvoker) screen).invokeAddDrawableChild(serverButton);
             serverButtons.add(serverButton);
             LOGGER.info("Added update button for server: {}", server.name);
         }

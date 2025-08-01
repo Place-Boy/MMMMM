@@ -3,6 +3,7 @@ package com.mmmmm.mixin;
 import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.multiplayer.AddServerScreen;
+import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
@@ -37,12 +38,12 @@ public abstract class EditServerScreenMixin {
                     }
                 });
 
-        // You may need to update this part if CycleButton is not present or changed
-        // screen.children().stream()
-        //         .filter(c -> c instanceof CycleButton)
-        //         .map(c -> (CycleButton<?>) c)
-        //         .filter(button -> button.getMessage().getString().contains("Resource"))
-        //         .forEach(button -> button.setY(button.getY() + 18));
+        // Move the resource pack prompt down
+        screen.children().stream()
+                .filter(c -> c instanceof CyclingButtonWidget)
+                .map(c -> (CyclingButtonWidget<?>) c)
+                .filter(button -> button.getMessage().getString().contains("Resource"))
+                .forEach(button -> button.setY(button.getY() + 18)); // Adjust value as needed
 
         customField = new TextFieldWidget(
                 mc.textRenderer,
@@ -53,7 +54,6 @@ public abstract class EditServerScreenMixin {
         );
         customField.setMaxLength(100);
 
-        // Fill the custom field if metadata exists
         EditServerScreenAccessor accessor = (EditServerScreenAccessor) screen;
         String serverIP = accessor.getServerData().address;
         String existingMetadata = ServerMetadata.getMetadata(serverIP);
@@ -61,7 +61,7 @@ public abstract class EditServerScreenMixin {
             customField.setText(existingMetadata);
         }
 
-        ((com.mmmmm.mixin.ScreenAccessorMixin) screen).invokeAddDrawableChild(customField);
+        ((com.mmmmm.mixin.ScreenInvoker) this).invokeAddDrawableChild(customField);
     }
 
     @Inject(method = "addAndClose", at = @At("TAIL"))
