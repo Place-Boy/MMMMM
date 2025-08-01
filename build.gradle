@@ -16,18 +16,22 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
+	maven { url = 'https://maven.fabricmc.net/' }
+	mavenCentral()
 }
 
 loom {
+	mixin {
+		defaultRefmapName = "mmmmm.refmap.json"
+	}
 	splitEnvironmentSourceSets()
 
 	mods {
-		"modid" {
+		"mmmmm" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
 	}
-
 }
 
 dependencies {

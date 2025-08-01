@@ -1,48 +1,24 @@
 package com.mmmmm;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
-/**
- * Config class to handle mod settings and updates.
- */
-@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.MOD)
 public class Config {
+    public static int fileServerPort = 8080;
 
-    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-
-    private static final ModConfigSpec.ConfigValue<Integer> FILE_SERVER_PORT = BUILDER
-            .comment(
-                    "Port number for the file server to run on",
-                    "Default: 8080"
-            )
-            .define("fileServerPort", 8080);
-
-    /**
-     * Compile the final specification.
-     */
-    static final ModConfigSpec SPEC = BUILDER.build();
-
-    public static int fileServerPort;
-
-    /**
-     * Called when the configuration is loaded or updated. This ensures runtime
-     * variables always hold accurate, current values.
-     */
-    @SubscribeEvent
-    static void onLoad(final ModConfigEvent event) {
-        // Ensure the correct config type (COMMON) is loaded.
-        if (!event.getConfig().getSpec().equals(SPEC)) {
-            return;
+    public static void registerConfig() {
+        // Simple config loading (replace with Cloth Config for more features)
+        Path configPath = Path.of("config", "mmmmm.properties");
+        if (Files.exists(configPath)) {
+            try {
+                var props = new java.util.Properties();
+                try (var in = Files.newInputStream(configPath)) {
+                    props.load(in);
+                }
+                fileServerPort = Integer.parseInt(props.getProperty("fileServerPort", "8080"));
+            } catch (Exception e) {
+                MMMMM.LOGGER.error("Failed to load config", e);
+            }
         }
-
-        // Update static values with configuration values
-        fileServerPort = FILE_SERVER_PORT.get();
-
-        // Log configuration load
-        MMMMM.LOGGER.info("Configuration loaded:");
-        MMMMM.LOGGER.info("File Server Port: {}", fileServerPort);
     }
 }

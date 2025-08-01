@@ -1,38 +1,40 @@
 package com.mmmmm.client;
 
 import com.mmmmm.Checksum;
-import com.mmmmm.Config;
-import com.mmmmm.MMMMM;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
-import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.client.multiplayer.ServerList;
-import net.minecraft.network.chat.Component;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ScreenEvent.Init.Post;
-import net.neoforged.bus.api.SubscribeEvent;
+import com.mmmmm.client.DownloadProgressScreen;
+import com.mmmmm.client.ServerMetadata;
+
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.TitleScreen;
+import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.option.ServerList;
+
+import net.minecraft.text.Text;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
-public class ClientEventHandlers {
 
+
+public class ClientEventHandlers implements ClientModInitializer {
     private static final int CONNECTION_TIMEOUT_MS = 5000;
     private static final Path MOD_DOWNLOAD_PATH = Path.of("MMMMM/shared-files/mods.zip");
     private static final Path UNZIP_DESTINATION = Path.of("mods");
@@ -40,14 +42,18 @@ public class ClientEventHandlers {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
     private static final List<Button> serverButtons = new ArrayList<>();
 
-    @SubscribeEvent
-    public static void onMultiplayerScreenInit(Post event) {
-        if (!(event.getScreen() instanceof JoinMultiplayerScreen screen)) {
-            return;
-        }
+    @Override
+    public void onInitializeClient() {
+        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+            if (screen instanceof MultiplayerScreen joinScreen) {
+                addUpdateButtons(joinScreen);
+            }
+        });
+    }
 
-        LOGGER.info("Multiplayer screen initialized. Adding server buttons.");
-        ServerList serverList = new ServerList(Minecraft.getInstance());
+    private static void addUpdateButtons(MultiplayerScreen screen) {
+        serverButtons.clear();
+        ServerList serverList = new ServerList(MinecraftClient.getInstance());
         serverList.load();
 
         int buttonX = screen.width - 55;
@@ -59,29 +65,28 @@ public class ClientEventHandlers {
             int yOffset = buttonY + (i * buttonSpacing);
             if (yOffset + 20 > maxHeight) break;
 
-            ServerData server = serverList.get(i);
+            ServerInfo = serverList.get(i);
             Button serverButton = createServerButton(buttonX, yOffset, server);
-            event.addListener(serverButton);
+            screen.addRenderableWidget(serverButton);
             serverButtons.add(serverButton);
         }
     }
 
-    private static Button createServerButton(int x, int y, ServerData server) {
+    private static Button createServerButton(int x, int y, ServerInfo server) {
         return Button.builder(
                 Component.literal("Update"),
                 (btn) -> {
-                    String serverUpdateIP = ServerMetadata.getMetadata(server.ip); // Retrieve custom data (e.g., URL or IP)
+                    String serverUpdateIP = com.mmmmm.client.ServerMetadata.getMetadata(server.ip);
                     LOGGER.info("Update button clicked for server: {}", serverUpdateIP);
-                    downloadAndProcessMod(serverUpdateIP); // Pass the correct metadata
+                    downloadAndProcessMod(serverUpdateIP);
                 }
         ).bounds(x, y, 50, 20).build();
     }
 
     private static void downloadAndProcessMod(String serverUpdateIP) {
-        Minecraft minecraft = Minecraft.getInstance();
+        MinecraftClient minecraft = MinecraftClient.getInstance();
         TitleScreen titleScreen = new TitleScreen();
 
-        // Ensure the URL has a protocol
         String modsUrl = serverUpdateIP;
         if (modsUrl == null || modsUrl.isBlank()) {
             LOGGER.info("No mod URL found for " + serverUpdateIP);
@@ -98,7 +103,7 @@ public class ClientEventHandlers {
 
         final String finalModsUrl = modsUrl;
 
-        DownloadProgressScreen progressScreen = new DownloadProgressScreen(modsUrl); // Pass the correct IP/URL
+        DownloadProgressScreen progressScreen = new DownloadProgressScreen(modsUrl);
         minecraft.setScreen(progressScreen);
 
         Executors.newSingleThreadExecutor().execute(() -> {
@@ -120,7 +125,6 @@ public class ClientEventHandlers {
                 sendPlayerMessage("Failed to download or extract mods for " + serverUpdateIP + ". Check logs for more details.");
             } finally {
                 minecraft.execute(() -> minecraft.setScreen(titleScreen));
-                Executors.newSingleThreadExecutor().shutdown();
             }
         });
     }
@@ -145,7 +149,7 @@ public class ClientEventHandlers {
     private static void downloadFileWithProgress(HttpURLConnection connection, Path destination, DownloadProgressScreen progressScreen) throws IOException {
         Files.createDirectories(destination.getParent());
         if (!Files.exists(destination)) {
-            Files.createFile(destination); // Create the file only if it doesn't exist
+            Files.createFile(destination);
         }
         try (InputStream in = connection.getInputStream();
              var out = Files.newOutputStream(destination)) {
@@ -221,8 +225,8 @@ public class ClientEventHandlers {
     }
 
     private static void sendPlayerMessage(String message) {
-        if (Minecraft.getInstance().player != null) {
-            Minecraft.getInstance().player.sendSystemMessage(Component.literal(message));
+        if (MinecraftClient.getInstance().player != null) {
+            MinecraftClient.getInstance().player.sendSystemMessage(Component.literal(message));
         }
     }
 }

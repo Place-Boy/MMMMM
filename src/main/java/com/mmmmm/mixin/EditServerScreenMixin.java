@@ -1,11 +1,9 @@
 package com.mmmmm.mixin;
 
 import com.mmmmm.client.ServerMetadata;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.EditServerScreen;
-import net.minecraft.network.chat.Component;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.EditBox;
+import net.minecraft.client.gui.screen.multiplayer.AddServerScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static com.mojang.text2speech.Narrator.LOGGER;
 
-@Mixin(EditServerScreen.class)
+@Mixin(AddServerScreen.class)
 public abstract class EditServerScreenMixin {
 
     @Shadow public abstract void onClose();
@@ -25,8 +23,8 @@ public abstract class EditServerScreenMixin {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
-        Minecraft mc = Minecraft.getInstance();
-        EditServerScreen screen = (EditServerScreen) (Object) this;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        AddServerScreen screen = (AddServerScreen) (Object) this;
 
         int[] index = {0};
         screen.children().stream()
@@ -70,7 +68,7 @@ public abstract class EditServerScreenMixin {
         LOGGER.info("onSaveCustomField called");
         if (customField != null) {
             String customValue = customField.getValue();
-            EditServerScreen screen = (EditServerScreen) (Object) this;
+            AddServerScreen screen = (AddServerScreen) (Object) this;
             String serverIP = ((EditServerScreenAccessor) screen).getServerData().ip;
             ServerMetadata.setMetadata(serverIP, customValue);
         }
@@ -78,7 +76,7 @@ public abstract class EditServerScreenMixin {
 
     @Inject(method = "render", at = @At("TAIL"))
     private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        int x = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
+        int x = MinecraftClient.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
         if (labelYPositions[0] != 0) {
             graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0], 0xA0A0A0);
         }

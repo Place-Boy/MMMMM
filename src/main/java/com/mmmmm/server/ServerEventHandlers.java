@@ -1,24 +1,17 @@
 package com.mmmmm.server;
 
 import com.mmmmm.MMMMM;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 
-/**
- * Handles server-side events.
- */
-@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.DEDICATED_SERVER)
 public class ServerEventHandlers {
-
-    @SubscribeEvent
-    public static void onCommonSetup(FMLCommonSetupEvent event) {
-        try {
-            MMMMM.LOGGER.info("Performing common setup tasks.");
-            FileHostingServer.start();
-        } catch (Exception e) {
-            MMMMM.LOGGER.error("Failed to start file hosting server: ", e);
-        }
+    public static void register() {
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+            try {
+                MMMMM.LOGGER.info("Performing common setup tasks.");
+                FileHostingServer.start();
+            } catch (Exception e) {
+                MMMMM.LOGGER.error("Failed to start file hosting server: ", e);
+            }
+        });
     }
 }

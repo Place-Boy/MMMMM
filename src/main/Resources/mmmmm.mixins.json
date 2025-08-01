@@ -2,11 +2,10 @@
   "required": true,
   "package": "com.mmmmm.mixin",
   "compatibilityLevel": "JAVA_21",
+  "refmap": "mmmmm.refmap.json",
   "mixins": [
-    "ScreenAccessorMixin"
-  ],
-  "client": [
     "EditServerScreenMixin",
-    "EditServerScreenAccessor"
+    "EditServerScreenAccessor",
+    "ScreenAccessorMixin"
   ]
 }

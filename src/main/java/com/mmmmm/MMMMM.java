@@ -1,29 +1,19 @@
+// Fabric mod main class
 package com.mmmmm;
 
-import com.mojang.logging.LogUtils;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.common.NeoForge;
+import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * Main mod class for ExampleMod.
- */
-@Mod(MMMMM.MODID)
-public class MMMMM {
-
+public class MMMMM implements ModInitializer {
     public static final String MODID = "mmmmm";
-    public static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = LoggerFactory.getLogger(MODID);
 
-    public MMMMM(ModContainer modContainer) {
+    @Override
+    public void onInitialize() {
         LOGGER.info("Initializing MMMMM...");
-
-        // Register configuration
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
-
+        Config.registerConfig();
+        RegisterCommands.register();
         LOGGER.info("MMMMM initialized.");
-
-        NeoForge.EVENT_BUS.addListener(RegisterCommands::onRegisterCommands);
     }
 }
