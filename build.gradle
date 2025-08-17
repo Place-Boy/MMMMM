@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version "${loom_version}"
+	id 'fabric-loom' version '1.6-SNAPSHOT'
 	id 'maven-publish'
 }
 
@@ -16,22 +16,18 @@ repositories {
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
-	maven { url = 'https://maven.fabricmc.net/' }
-	mavenCentral()
 }
 
 loom {
-	mixin {
-		defaultRefmapName = "mmmmm.refmap.json"
-	}
-	splitEnvironmentSourceSets()
+    splitEnvironmentSourceSets()
 
 	mods {
-		"mmmmm" {
+		"modid" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
 	}
+
 }
 
 dependencies {
@@ -49,12 +45,12 @@ processResources {
 	inputs.property "version", project.version
 
 	filesMatching("fabric.mod.json") {
-		expand "version": inputs.properties.version
+		expand "version": project.version
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 17
+	it.options.release = 21
 }
 
 java {
@@ -68,10 +64,8 @@ java {
 }
 
 jar {
-	inputs.property "archivesName", project.base.archivesName
-
 	from("LICENSE") {
-		rename { "${it}_${inputs.properties.archivesName}"}
+		rename { "${it}_${project.base.archivesName.get()}"}
 	}
 }
 
