@@ -32,21 +32,21 @@ public class FileHostingServer {
         fileHostingServer.createContext("/", exchange -> {
             try {
                 String requestPath = exchange.getRequestURI().getPath();
-                MMMMM.LOGGER.info("Received request: " + requestPath);
+               MMMMM.LOGGER.info("Received request: " + requestPath);
 
                 // Resolve the requested file path
                 Path filePath = FILE_DIRECTORY.resolve(requestPath.substring(1)).normalize();
 
                 // Security: Ensure the resolved file path is within the allowed directory
                 if (!filePath.startsWith(FILE_DIRECTORY)) {
-                    MMMMM.LOGGER.warn("Unauthorized access attempt: " + filePath);
+                   MMMMM.LOGGER.warn("Unauthorized access attempt: " + filePath);
                     exchange.sendResponseHeaders(403, -1); // Forbidden
                     return;
                 }
 
                 // Check if the requested file exists
                 if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
-                    MMMMM.LOGGER.warn("File not found: " + filePath);
+                   MMMMM.LOGGER.warn("File not found: " + filePath);
                     exchange.sendResponseHeaders(404, -1); // Not Found
                     return;
                 }
@@ -60,14 +60,14 @@ public class FileHostingServer {
                 exchange.sendResponseHeaders(200, fileBytes.length);
                 exchange.getResponseBody().write(fileBytes);
 
-                MMMMM.LOGGER.info("Successfully served file: " + filePath);
+               MMMMM.LOGGER.info("Successfully served file: " + filePath);
 
             } catch (Exception e) {
-                MMMMM.LOGGER.error("Error processing request", e);
+               MMMMM.LOGGER.error("Error processing request", e);
                 try {
                     exchange.sendResponseHeaders(500, -1); // Internal Server Error
                 } catch (IOException ioException) {
-                    MMMMM.LOGGER.error("Failed to send error response", ioException);
+                  MMMMM.LOGGER.error("Failed to send error response", ioException);
                 }
             } finally {
                 exchange.close();
@@ -77,7 +77,7 @@ public class FileHostingServer {
         // Start the server on a separate thread
         new Thread(() -> {
             fileHostingServer.start();
-            MMMMM.LOGGER.info("File hosting server started on port " + FILE_SERVER_PORT);
+           MMMMM.LOGGER.info("File hosting server started on port " + FILE_SERVER_PORT);
         }).start();
     }
 

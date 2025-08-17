@@ -1,4 +1,3 @@
-// Fabric mod main class
 package com.mmmmm;
 
 import com.mmmmm.server.ServerEventHandlers;
