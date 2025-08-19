@@ -72,7 +72,9 @@ public class ClientEventHandlers implements ClientModInitializer {
 
             ServerInfo server = serverList.get(i);
             ButtonWidget serverButton = createServerButton(buttonX, yOffset, server);
+            LOGGER.info("Before adding drawable child for server: {}", server.name);
             ((ScreenInvoker) screen).invokeAddDrawableChild(serverButton);
+            LOGGER.info("After adding drawable child for server: {}", server.name);
             serverButtons.add(serverButton);
             LOGGER.info("Added update button for server: {}", server.name);
         }
