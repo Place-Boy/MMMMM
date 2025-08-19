@@ -15,6 +15,7 @@ import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -81,14 +82,17 @@ public class ClientEventHandlers implements ClientModInitializer {
     }
 
     private static ButtonWidget createServerButton(int x, int y, ServerInfo server) {
-        return ButtonWidget.builder(
+        ButtonWidget button = ButtonWidget.builder(
                 Text.literal("Update"),
                 (btn) -> {
+                    LOGGER.info("Starting update button for {}", server.name);
                     String serverUpdateIP = ServerMetadata.getMetadata(server.address);
                     LOGGER.info("Update button clicked for server: {}", serverUpdateIP);
                     downloadAndProcessMod(serverUpdateIP);
                 }
         ).dimensions(x, y, 50, 20).build();
+        button.active = true;
+        return button;
     }
 
     private static void downloadAndProcessMod(String serverUpdateIP) {
