@@ -9,6 +9,6 @@
     "ScreenInvoker",
     "MultiplayerScreenAccessor",
     "ScreenMixin",
-    
+    "ScreenResizeMixin"
   ]
 }

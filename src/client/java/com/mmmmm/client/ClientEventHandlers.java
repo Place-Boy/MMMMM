@@ -3,6 +3,7 @@ package com.mmmmm.client;
 import com.mmmmm.Checksum;
 import com.mmmmm.mixin.MultiplayerScreenAccessor;
 import com.mmmmm.mixin.ScreenInvoker;
+import com.mmmmm.mixin.ScreenMixin;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -75,6 +76,10 @@ public class ClientEventHandlers implements ClientModInitializer {
             ButtonWidget serverButton = createServerButton(buttonX, yOffset, server);
             LOGGER.info("Before adding drawable child for server: {}", server.name);
             ((ScreenInvoker) screen).invokeAddDrawableChild(serverButton);
+            ScreenMixin screenMixin = (ScreenMixin) screen;
+            screenMixin.invokeChildren().add(0, serverButton);
+            screenMixin.invokeDrawables().add(0,serverButton);
+            screenMixin.invokeSelectables().add(0,serverButton);
             LOGGER.info("After adding drawable child for server: {}", server.name);
             serverButtons.add(serverButton);
             LOGGER.info("Added update button for server: {}", server.name);
