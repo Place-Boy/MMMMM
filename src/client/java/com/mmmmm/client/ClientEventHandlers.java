@@ -56,7 +56,7 @@ public class ClientEventHandlers implements ClientModInitializer {
         }, "mmmmm-multiplayer-poll").start();
     }
 
-    private static void addUpdateButtons(MultiplayerScreen screen) {
+    public static void addUpdateButtons(MultiplayerScreen screen) {
         serverButtons.clear();
         ServerList serverList = ((MultiplayerScreenAccessor) screen).getServerList();
         LOGGER.info("Injecting update buttons for {} servers", serverList.size());

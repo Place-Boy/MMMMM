@@ -8,6 +8,7 @@
     "EditServerScreenAccessor",
     "ScreenInvoker",
     "MultiplayerScreenAccessor",
-    "MultiplayerScreenMixin"
+    "ScreenMixin",
+    
   ]
 }
