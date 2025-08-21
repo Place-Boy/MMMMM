@@ -55,17 +55,26 @@ public class RegisterCommands {
             Path modsZip = Path.of("MMMMM/shared-files/mods.zip");
             HttpClient httpClient = HttpClient.newHttpClient();
 
+            var includedMods = new java.util.ArrayList<String>();
+            var excludedMods = new java.util.ArrayList<String>();
+
             try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(modsZip))) {
                 Files.walk(modsFolder).forEach(path -> {
                     try {
                         if (Files.isRegularFile(path) && path.toString().endsWith(".jar")) {
                             String modName = getModNameFromJar(path);
-                            if (modName != null && !isServerOnlyMod(modName, httpClient)) {
-                                Path relativePath = modsFolder.relativize(path);
-                                ZipEntry zipEntry = new ZipEntry(relativePath.toString());
-                                zipOut.putNextEntry(zipEntry);
-                                Files.copy(path, zipOut);
-                                zipOut.closeEntry();
+                            if (modName != null) {
+                                boolean isServerOnly = isServerOnlyMod(modName, httpClient);
+                                if (!Config.filterServerSideMods || !isServerOnly) {
+                                    Path relativePath = modsFolder.relativize(path);
+                                    ZipEntry zipEntry = new ZipEntry(relativePath.toString());
+                                    zipOut.putNextEntry(zipEntry);
+                                    Files.copy(path, zipOut);
+                                    zipOut.closeEntry();
+                                    includedMods.add(modName + " (" + path.getFileName() + ")");
+                                } else {
+                                    excludedMods.add(modName + " (" + path.getFileName() + ")");
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -76,6 +85,8 @@ public class RegisterCommands {
             } catch (IOException e) {
                 LOGGER.error("Failed to create mods.zip", e);
             } finally {
+                LOGGER.info("Included mods: {}", includedMods.isEmpty() ? "None" : String.join(", ", includedMods));
+                LOGGER.info("Excluded mods: {}", excludedMods.isEmpty() ? "None" : String.join(", ", excludedMods));
                 executor.shutdown();
             }
         });
@@ -83,13 +94,24 @@ public class RegisterCommands {
 
     private static String getModNameFromJar(Path jarPath) {
         try (ZipFile zipFile = new ZipFile(jarPath.toFile())) {
-            Enumeration<? extends ZipEntry> entries = zipFile.entries();
-            while (entries.hasMoreElements()) {
-                ZipEntry entry = entries.nextElement();
-                if (entry.getName().startsWith("META-INF/") && entry.getName().endsWith(".toml")) {
-                    try (InputStream is = zipFile.getInputStream(entry)) {
-                        Toml toml = new Toml().read(is);
-                        return toml.getString("displayName"); // or "name" depending on the toml structure
+            ZipEntry entry = zipFile.getEntry("META-INF/neoforge.mods.toml");
+            if (entry != null) {
+                try (InputStream is = zipFile.getInputStream(entry)) {
+                    Toml toml = new Toml().read(is);
+                    // Try to get display_name at root (not standard for NeoForge, but fallback)
+                    String rootDisplayName = toml.getString("display_name");
+                    if (rootDisplayName != null) {
+                        return rootDisplayName;
+                    }
+                    // Correct NeoForge: [[mods]] table
+                    var modsList = toml.getTables("mods");
+                    if (modsList != null && !modsList.isEmpty()) {
+                        Toml firstMod = modsList.get(0);
+                        String modDisplayName = firstMod.getString("displayName");
+                        if (modDisplayName != null) {
+                            LOGGER.info("Found mod name: " + modDisplayName);
+                            return modDisplayName;
+                        }
                     }
                 }
             }
@@ -103,7 +125,7 @@ public class RegisterCommands {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.modrinth.com/v2/search?query=" + URLEncoder.encode(modName, "UTF-8")))
-                    .header("User-Agent", "Place-Boy/https://github.com/Place-Boy/MMMMM/1.0.1-beta") // Add your mod's name/version here
+                    .header("User-Agent", "Place-Boy/https://github.com/Place-Boy/MMMMM/1.0.1-beta")
                     .GET()
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -111,8 +133,10 @@ public class RegisterCommands {
             JSONArray hits = json.getJSONArray("hits");
             if (hits.length() > 0) {
                 JSONObject mod = hits.getJSONObject(0);
-                String side = mod.optString("side", "both");
-                return "server".equalsIgnoreCase(side);
+                String clientSide = mod.optString("client_side", "required");
+                String serverSide = mod.optString("server_side", "required");
+                // Exclude if client_side is "unsupported" and server_side is "required"
+                return "unsupported".equalsIgnoreCase(clientSide) && "required".equalsIgnoreCase(serverSide);
             }
         } catch (Exception e) {
             LOGGER.error("Failed to query Modrinth for: " + modName, e);

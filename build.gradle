@@ -195,7 +195,7 @@ jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE // Exclude duplicate files in the jar
     from {
         configurations.runtimeClasspath
-                .findAll { it.name.contains('toml4j') }
+                .findAll { it.name.contains('toml4j') || it.name.contains('json') } // Include only specific dependencies
                 .collect { zipTree(it) }
     }
     // Optionally, exclude META-INF files to avoid duplicates

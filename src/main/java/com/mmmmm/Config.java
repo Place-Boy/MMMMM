@@ -20,12 +20,22 @@ public class Config {
             )
             .define("fileServerPort", 8080);
 
+    private static final ModConfigSpec.ConfigValue<Boolean> FILTER_SERVER_MODS = BUILDER
+            .comment(
+                    "If true, server-only mods will be excluded from the zip.",
+                    "This trys to decrease download time for clients.",
+                    "Disable this if server is crashing on client join due to missing mods.",
+                    "Default: false"
+            )
+            .define("filterServerMods", false);
+
     /**
      * Compile the final specification.
      */
     static final ModConfigSpec SPEC = BUILDER.build();
 
     public static int fileServerPort;
+    public static boolean filterServerSideMods;
 
     /**
      * Called when the configuration is loaded or updated. This ensures runtime
@@ -40,9 +50,11 @@ public class Config {
 
         // Update static values with configuration values
         fileServerPort = FILE_SERVER_PORT.get();
+        filterServerSideMods = FILTER_SERVER_MODS.get();
 
         // Log configuration load
         MMMMM.LOGGER.info("Configuration loaded:");
         MMMMM.LOGGER.info("File Server Port: {}", fileServerPort);
+        MMMMM.LOGGER.info("Filter Server Mods: {}", filterServerSideMods);
     }
 }
