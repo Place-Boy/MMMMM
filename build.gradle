@@ -36,9 +36,28 @@ dependencies {
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
+<<<<<<< Updated upstream
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	
+=======
+    // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
+    // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
+    // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}")
+    // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-forge-api:${jei_version}")
+    // runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}-forge:${jei_version}")
+
+    // Example mod dependency using a mod jar from ./libs with a flat dir repository
+    // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
+    // The group id is ignored when searching -- in this case, it is "blank"
+    // implementation fg.deobf("blank:coolmod-${mc_version}:${coolmod_version}")
+
+    // For more info:
+    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
+    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+    implementation 'com.moandjiezana.toml:toml4j:0.7.2'
+    implementation 'org.json:json:20231013'
+>>>>>>> Stashed changes
 }
 
 processResources {
@@ -53,6 +72,7 @@ tasks.withType(JavaCompile).configureEach {
 	it.options.release = 17
 }
 
+<<<<<<< Updated upstream
 java {
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
 	// if it is present.
@@ -85,4 +105,15 @@ publishing {
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
 	}
+=======
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE // Exclude duplicate files in the jar
+    from {
+        configurations.runtimeClasspath
+                .findAll { it.name.contains('toml4j') || it.name.contains('json') } // Include only specific dependencies
+                .collect { zipTree(it) }
+    }
+    // Optionally, exclude META-INF files to avoid duplicates
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+>>>>>>> Stashed changes
 }

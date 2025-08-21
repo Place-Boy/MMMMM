@@ -1,0 +1,58 @@
+{
+  "mappings": {
+    "com/mmmmm/mixin/EditServerScreenAccessor": {
+      "server": "field_2469:Lnet/minecraft/class_642;"
+    },
+    "com/mmmmm/mixin/EditServerScreenMixin": {
+      "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)I": "Lnet/minecraft/class_332;method_27535(Lnet/minecraft/class_327;Lnet/minecraft/class_2561;III)I",
+      "addAndClose": "Lnet/minecraft/class_422;method_2172()V",
+      "init": "Lnet/minecraft/class_422;method_25426()V",
+      "render": "Lnet/minecraft/class_422;method_25394(Lnet/minecraft/class_332;IIF)V"
+    },
+    "com/mmmmm/mixin/MultiplayerScreenAccessor": {
+      "serverList": "field_3040:Lnet/minecraft/class_641;",
+      "serverListWidget": "field_3043:Lnet/minecraft/class_4267;"
+    },
+    "com/mmmmm/mixin/ScreenInvoker": {
+      "addDrawableChild": "method_37063(Lnet/minecraft/class_364;)Lnet/minecraft/class_364;"
+    },
+    "com/mmmmm/mixin/ScreenMixin": {
+      "addDrawableChild": "method_37063(Lnet/minecraft/class_364;)Lnet/minecraft/class_364;",
+      "children": "method_25396()Ljava/util/List;",
+      "drawables": "field_33816:Ljava/util/List;",
+      "selectables": "field_33815:Ljava/util/List;"
+    },
+    "com/mmmmm/mixin/ScreenResizeMixin": {
+      "resize": "Lnet/minecraft/class_437;method_25410(Lnet/minecraft/class_310;II)V"
+    }
+  },
+  "data": {
+    "named:intermediary": {
+      "com/mmmmm/mixin/EditServerScreenAccessor": {
+        "server": "field_2469:Lnet/minecraft/class_642;"
+      },
+      "com/mmmmm/mixin/EditServerScreenMixin": {
+        "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)I": "Lnet/minecraft/class_332;method_27535(Lnet/minecraft/class_327;Lnet/minecraft/class_2561;III)I",
+        "addAndClose": "Lnet/minecraft/class_422;method_2172()V",
+        "init": "Lnet/minecraft/class_422;method_25426()V",
+        "render": "Lnet/minecraft/class_422;method_25394(Lnet/minecraft/class_332;IIF)V"
+      },
+      "com/mmmmm/mixin/MultiplayerScreenAccessor": {
+        "serverList": "field_3040:Lnet/minecraft/class_641;",
+        "serverListWidget": "field_3043:Lnet/minecraft/class_4267;"
+      },
+      "com/mmmmm/mixin/ScreenInvoker": {
+        "addDrawableChild": "method_37063(Lnet/minecraft/class_364;)Lnet/minecraft/class_364;"
+      },
+      "com/mmmmm/mixin/ScreenMixin": {
+        "addDrawableChild": "method_37063(Lnet/minecraft/class_364;)Lnet/minecraft/class_364;",
+        "children": "method_25396()Ljava/util/List;",
+        "drawables": "field_33816:Ljava/util/List;",
+        "selectables": "field_33815:Ljava/util/List;"
+      },
+      "com/mmmmm/mixin/ScreenResizeMixin": {
+        "resize": "Lnet/minecraft/class_437;method_25410(Lnet/minecraft/class_310;II)V"
+      }
+    }
+  }
+}
