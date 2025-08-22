@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static com.mojang.text2speech.Narrator.LOGGER;
@@ -79,30 +78,22 @@ public abstract class EditServerScreenMixin {
     @Inject(method = "render", at = @At("TAIL"))
     private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         int x = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
+        
+        // Hide original labels by drawing background color over them
         if (labelYPositions[0] != 0) {
+            // Cover the original "Server Name" label with background color
+            graphics.fill(x, labelYPositions[0] - 1, x + 100, labelYPositions[0] + 9, 0xFF3C3C3C); // Dark gray background
+            // Draw our custom label
             graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0], 0xA0A0A0);
         }
         if (labelYPositions[1] != 0) {
+            // Cover the original "Server Address" label with background color  
+            graphics.fill(x, labelYPositions[1] - 1, x + 100, labelYPositions[1] + 9, 0xFF3C3C3C); // Dark gray background
+            // Draw our custom label
             graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1], 0xA0A0A0);
         }
+        
+        // Draw the Download URL label
         graphics.drawString(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xA0A0A0);
-    }
-
-    // Redirect original label draw call for "Server Name"
-    @Redirect(method = "render", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I",
-            ordinal = 0))
-    private int skipNameLabel(GuiGraphics graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
-        return 0;
-    }
-
-    // Redirect original label draw call for "Server Address"
-    @Redirect(method = "render", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I",
-            ordinal = 1))
-    private int skipAddressLabel(GuiGraphics graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
-        return 0;
     }
 }
