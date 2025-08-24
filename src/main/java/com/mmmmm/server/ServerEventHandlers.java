@@ -9,7 +9,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 /**
  * Handles server-side events.
  */
-@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.DEDICATED_SERVER)
+@EventBusSubscriber(modid = MMMMM.MODID, value = Dist.DEDICATED_SERVER)
 public class ServerEventHandlers {
 
     @SubscribeEvent

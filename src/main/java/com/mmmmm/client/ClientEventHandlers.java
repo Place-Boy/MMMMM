@@ -30,7 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = MMMMM.MODID, value = Dist.CLIENT)
 public class ClientEventHandlers {
 
     private static final int CONNECTION_TIMEOUT_MS = 5000;
@@ -222,7 +222,7 @@ public class ClientEventHandlers {
 
     private static void sendPlayerMessage(String message) {
         if (Minecraft.getInstance().player != null) {
-            Minecraft.getInstance().player.sendSystemMessage(Component.literal(message));
+            Minecraft.getInstance().player.displayClientMessage(Component.literal(message), false);
         }
     }
 }
