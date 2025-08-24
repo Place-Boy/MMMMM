@@ -40,6 +40,19 @@ public abstract class EditServerScreenMixin {
                 });
 
         screen.children().stream()
+                .forEach(c -> {
+                    if (c instanceof EditBox editBox) {
+                        LOGGER.info("Child: " + editBox.getClass().getName() + " at Y: " + editBox.getY());
+                    } else if (c instanceof net.minecraft.client.gui.components.CycleButton cycleButton) {
+                        LOGGER.info("Child: " + cycleButton.getClass().getName() + " at Y: " + cycleButton.getY());
+                    } else if (c instanceof net.minecraft.client.gui.components.Button button) {
+                        LOGGER.info("Child: " + button.getClass().getName() + " at Y: " + button.getY());
+                    } else {
+                        LOGGER.info("Child: " + c.getClass().getName());
+                    }
+                });
+
+        screen.children().stream()
                 .filter(c -> c instanceof net.minecraft.client.gui.components.CycleButton)
                 .map(c -> (net.minecraft.client.gui.components.CycleButton) c)
                 .filter(button -> button.getMessage().getString().contains("Resource"))
@@ -74,35 +87,5 @@ public abstract class EditServerScreenMixin {
             String serverIP = ((EditServerScreenAccessor) screen).getServerData().ip;
             ServerMetadata.setMetadata(serverIP, customValue);
         }
-    }
-
-    @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        int x = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
-        if (labelYPositions[0] != 0) {
-            graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0], 0xA0A0A0);
-        }
-        if (labelYPositions[1] != 0) {
-            graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1], 0xA0A0A0);
-        }
-        graphics.drawString(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xA0A0A0);
-    }
-
-    // Redirect original label draw call for "Server Name"
-    @Redirect(method = "render", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I",
-            ordinal = 0))
-    private int skipNameLabel(GuiGraphics graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
-        return 0;
-    }
-
-    // Redirect original label draw call for "Server Address"
-    @Redirect(method = "render", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I",
-            ordinal = 1))
-    private int skipAddressLabel(GuiGraphics graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
-        return 0;
     }
 }
