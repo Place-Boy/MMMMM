@@ -78,8 +78,10 @@ public abstract class EditServerScreenMixin {
         ((ScreenAccessorMixin) (Object) this).invokeAddRenderableWidget(customField);
     }
 
-    @Inject(method = "render", at = @At("HEAD"))
+    @Inject(method = "render", at = @At("TAIL"))
     private void render(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        Minecraft mc = Minecraft.getInstance();
+        graphics.drawString(mc.font, "Custom Field:", 10, 20, 0xFFFFFF, true); // Render text directly
         LOGGER.info("Render mixin called");
     }
 
