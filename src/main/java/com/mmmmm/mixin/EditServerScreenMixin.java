@@ -78,6 +78,11 @@ public abstract class EditServerScreenMixin {
         ((ScreenAccessorMixin) (Object) this).invokeAddRenderableWidget(customField);
     }
 
+    @Inject(method = "render", at = @At("HEAD"))
+    private void render(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        LOGGER.info("Render mixin called");
+    }
+
     @Inject(method = "onAdd", at = @At("TAIL"))
     private void onSaveCustomField(CallbackInfo ci) {
         LOGGER.info("onSaveCustomField called");
