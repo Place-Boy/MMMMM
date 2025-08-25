@@ -50,8 +50,10 @@ public class ClientEventHandlers {
         ServerList serverList = new ServerList(Minecraft.getInstance());
         serverList.load();
 
-        int buttonX = screen.width - 55;
-        int buttonY = 50;
+        int buttonX = 10;
+                //screen.width - 55;
+        int buttonY = 10;
+                //50;
         int buttonSpacing = 24;
         int maxHeight = screen.height - 50;
 
@@ -72,7 +74,19 @@ public class ClientEventHandlers {
                 (btn) -> {
                     String serverUpdateIP = ServerMetadata.getMetadata(server.ip); // Retrieve custom data (e.g., URL or IP)
                     LOGGER.info("Update button clicked for server: {}", serverUpdateIP);
-                    downloadAndProcessMod(serverUpdateIP); // Pass the correct metadata
+                    // Validate port range
+                    try {
+                        String[] parts = serverUpdateIP.split(":");
+                        if (parts.length == 2) {
+                            int port = Integer.parseInt(parts[1]);
+                            if (port < 0 || port > 65535) {
+                                throw new IllegalArgumentException("Invalid port: " + port);
+                            }
+                        }
+                        downloadAndProcessMod(serverUpdateIP);
+                    } catch (Exception e) {
+                        LOGGER.error("Invalid server address: {}", serverUpdateIP, e);
+                    }
                 }
         ).bounds(x, y, 50, 20).build();
     }

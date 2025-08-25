@@ -78,13 +78,6 @@ public abstract class EditServerScreenMixin {
         ((ScreenAccessorMixin) (Object) this).invokeAddRenderableWidget(customField);
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
-    private void render(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        Minecraft mc = Minecraft.getInstance();
-        graphics.drawString(mc.font, "Custom Field:", 10, 20, 0xFFFFFF, true); // Render text directly
-        LOGGER.info("Render mixin called");
-    }
-
     @Inject(method = "onAdd", at = @At("TAIL"))
     private void onSaveCustomField(CallbackInfo ci) {
         LOGGER.info("onSaveCustomField called");
@@ -94,5 +87,33 @@ public abstract class EditServerScreenMixin {
             String serverIP = ((EditServerScreenAccessor) screen).getServerData().ip;
             ServerMetadata.setMetadata(serverIP, customValue);
         }
+    }
+
+    @Inject(method = "render", at = @At("TAIL"))
+    private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        int x = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
+
+        if (Minecraft.getInstance().font == null) {
+            LOGGER.error("Font is not initialized!");
+            return;
+        } else {
+            LOGGER.info("Font is initialized.");
+        }
+
+        if (graphics == null) {
+            LOGGER.error("GuiGraphics object is null!");
+            return;
+        } else {
+            LOGGER.info("GuiGraphics object is valid.");
+        }
+
+        LOGGER.info("Render mixin called");
+
+        // Draw the Server Name and Server Address labels
+        graphics.drawCenteredString(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0] + 9, 0xA0A0A0);
+        graphics.drawCenteredString(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1] + 9, 0xA0A0A0);
+
+        // Draw the Download URL label
+        graphics.drawCenteredString(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xA0A0A0);
     }
 }

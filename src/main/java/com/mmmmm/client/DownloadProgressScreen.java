@@ -47,13 +47,11 @@ public class DownloadProgressScreen extends Screen {
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.renderBackground(guiGraphics, mouseX, mouseY, partialTicks);
-
+        // Remove the redundant renderBackground call
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
 
         // Draw the title with the correct server update IP
         guiGraphics.drawCenteredString(this.font, "Downloading mods from " + serverUpdateIP, this.width / 2, 20, 0xFFFFFF);
-
 
         // Draw the download speed above the progress bar
         int barWidth = 200;
@@ -72,8 +70,6 @@ public class DownloadProgressScreen extends Screen {
 
         // Draw the progress percentage
         guiGraphics.drawCenteredString(this.font, progress + "%", this.width / 2, barY + 5, 0xFFFFFF);
-
-        // The cancel button is already positioned below the progress bar in the `init` method
     }
 
     /**
