@@ -51,7 +51,7 @@ public class DownloadProgressScreen extends Screen {
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
 
         // Draw the title with the correct server update IP
-        guiGraphics.drawCenteredString(this.font, "Downloading mods from " + serverUpdateIP, this.width / 2, 20, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, "Downloading mods from " + serverUpdateIP, this.width / 2, 20, 0xFFFFFFFF);
 
         // Draw the download speed above the progress bar
         int barWidth = 200;

@@ -3,6 +3,7 @@ package com.mmmmm.client;
 import com.mmmmm.Checksum;
 import com.mmmmm.Config;
 import com.mmmmm.MMMMM;
+import com.mmmmm.mixin.ScreenAccessorMixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -40,34 +41,6 @@ public class ClientEventHandlers {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
     private static final List<Button> serverButtons = new ArrayList<>();
 
-    @SubscribeEvent
-    public static void onMultiplayerScreenInit(Post event) {
-        if (!(event.getScreen() instanceof JoinMultiplayerScreen screen)) {
-            return;
-        }
-
-        LOGGER.info("Multiplayer screen initialized. Adding server buttons.");
-        ServerList serverList = new ServerList(Minecraft.getInstance());
-        serverList.load();
-
-        int buttonX = 10;
-                //screen.width - 55;
-        int buttonY = 10;
-                //50;
-        int buttonSpacing = 24;
-        int maxHeight = screen.height - 50;
-
-        for (int i = 0; i < serverList.size(); i++) {
-            int yOffset = buttonY + (i * buttonSpacing);
-            if (yOffset + 20 > maxHeight) break;
-
-            ServerData server = serverList.get(i);
-            Button serverButton = createServerButton(buttonX, yOffset, server);
-            event.addListener(serverButton);
-            serverButtons.add(serverButton);
-        }
-    }
-
     private static Button createServerButton(int x, int y, ServerData server) {
         return Button.builder(
                 Component.literal("Update"),
@@ -91,7 +64,7 @@ public class ClientEventHandlers {
         ).bounds(x, y, 50, 20).build();
     }
 
-    private static void downloadAndProcessMod(String serverUpdateIP) {
+    public static void downloadAndProcessMod(String serverUpdateIP) {
         Minecraft minecraft = Minecraft.getInstance();
         TitleScreen titleScreen = new TitleScreen();
 
