@@ -89,31 +89,25 @@ public abstract class EditServerScreenMixin {
         }
     }
 
+    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V"))
+    private void redirectDrawString(GuiGraphics graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
+        // Prevent the original labels from being drawn by skipping the call
+        String labelText = text.getString();
+        if (!labelText.equals("Server Name") && !labelText.equals("Server Address")) {
+            graphics.drawString(font, text, x, y, color); // Allow other text to render
+        }
+    }
+
     @Inject(method = "render", at = @At("TAIL"))
     private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         int x = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
-
-        if (Minecraft.getInstance().font == null) {
-            LOGGER.error("Font is not initialized!");
-            return;
-        } else {
-            LOGGER.info("Font is initialized.");
-        }
-
-        if (graphics == null) {
-            LOGGER.error("GuiGraphics object is null!");
-            return;
-        } else {
-            LOGGER.info("GuiGraphics object is valid.");
-        }
-
-        LOGGER.info("Render mixin called");
-
         // Draw the Server Name and Server Address labels
-        graphics.drawCenteredString(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0] + 9, 0xA0A0A0);
-        graphics.drawCenteredString(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1] + 9, 0xA0A0A0);
+        //graphics.fill(x - 2, labelYPositions[0] + 7, x + 200, labelYPositions[0] + 21, 0xFF0000FF); // Blue background
+        graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0], 0xFFFFFFFF);
+        graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1], 0xFFFFFFFF);
+        LOGGER.info("Drawing text at X: {}, Y: {}", x, labelYPositions[0] + 9);
 
         // Draw the Download URL label
-        graphics.drawCenteredString(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xA0A0A0);
+        graphics.drawString(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xFFFFFFFF);
     }
 }
