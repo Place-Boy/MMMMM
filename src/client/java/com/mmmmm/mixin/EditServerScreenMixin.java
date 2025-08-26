@@ -2,10 +2,13 @@ package com.mmmmm.mixin;
 
 import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.screen.multiplayer.AddServerScreen;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.component.Component;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -16,8 +19,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(AddServerScreen.class)
 public abstract class EditServerScreenMixin {
-
-    @Shadow public abstract void close();
 
     private int[] labelYPositions = new int[2]; // 0 = Server Name Y, 1 = Server Address Y
     private TextFieldWidget customField;
@@ -74,33 +75,25 @@ public abstract class EditServerScreenMixin {
         }
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)V"))
+    private void redirectDrawLabel(DrawContext context, TextRenderer textRenderer, Text text, int x, int y, int color) {
+        // Skip original calls for the first two labels
+        if (text.getString().contains("Server Name") || text.getString().contains("Server Address")) {
+            return;
+        }
+        // Draw other labels normally
+        context.drawTextWithShadow(textRenderer, text, x, y, color);
+    }
+
+    @Inject(method = "render", at = @At("HEAD"))
+    private void onRenderStart(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         int x = MinecraftClient.getInstance().getWindow().getScaledWidth() / 2 - 100;
         if (labelYPositions[0] != 0) {
-            context.drawText(MinecraftClient.getInstance().textRenderer, Text.literal("Server Name"), x, labelYPositions[0], 0xA0A0A0, false);
+            context.drawText(MinecraftClient.getInstance().textRenderer, Text.literal("Server Name"), x, labelYPositions[0], 0xFFFFFFFF, true);
         }
         if (labelYPositions[1] != 0) {
-            context.drawText(MinecraftClient.getInstance().textRenderer, Text.literal("Server Address"), x, labelYPositions[1], 0xA0A0A0, false);
+            context.drawText(MinecraftClient.getInstance().textRenderer, Text.literal("Server Address"), x, labelYPositions[1], 0xFFFFFFFF, true);
         }
-        context.drawText(MinecraftClient.getInstance().textRenderer, Text.literal("Download URL"), x, MinecraftClient.getInstance().getWindow().getScaledHeight() / 4 + 50, 0xA0A0A0, false);
-    }
-
-    // Redirect original label draw call for "Server Name"
-    @Redirect(method = "render", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)I",
-            ordinal = 0))
-    private int skipNameLabel(DrawContext context, net.minecraft.client.font.TextRenderer font, Text text, int x, int y, int color) {
-        return 0;
-    }
-
-    // Redirect original label draw call for "Server Address"
-    @Redirect(method = "render", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)I",
-            ordinal = 1))
-    private int skipAddressLabel(DrawContext context, net.minecraft.client.font.TextRenderer font, Text text, int x, int y, int color) {
-        return 0;
+        context.drawText(MinecraftClient.getInstance().textRenderer, Text.literal("Download URL"), x, MinecraftClient.getInstance().getWindow().getScaledHeight() / 4 + 50, 0xFFFFFFFF, true);
     }
 }

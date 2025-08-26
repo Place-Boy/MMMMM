@@ -47,13 +47,12 @@ public class DownloadProgressScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context, mouseX, mouseY, delta);
         super.render(context, mouseX, mouseY, delta);
 
         // Draw the title
         context.drawCenteredTextWithShadow(this.textRenderer,
                 "Downloading mods from " + serverUpdateIP,
-                this.width / 2, 20, 0xFFFFFF);
+                this.width / 2, 20, 0xFFFFFFFF);
 
         int barWidth = 200;
         int barHeight = 20;
@@ -61,7 +60,7 @@ public class DownloadProgressScreen extends Screen {
         int barY = this.height / 2;
 
         // Draw download speed
-        context.drawCenteredTextWithShadow(this.textRenderer, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(this.textRenderer, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFFFF);
 
         // Draw progress bar background
         context.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFFAAAAAA);
@@ -71,7 +70,7 @@ public class DownloadProgressScreen extends Screen {
         context.fill(barX, barY, barX + progressWidth, barY + barHeight, 0xFF00FF00);
 
         // Draw progress percentage
-        context.drawCenteredTextWithShadow(this.textRenderer, progress + "%", this.width / 2, barY + 5, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(this.textRenderer, progress + "%", this.width / 2, barY + 5, 0xFFFFFFFF);
     }
 
     public void updateProgress(int progress, String downloadSpeed) {

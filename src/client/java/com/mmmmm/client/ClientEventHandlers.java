@@ -32,7 +32,6 @@ public class ClientEventHandlers implements ClientModInitializer {
     private static final Path UNZIP_DESTINATION = Path.of("mods");
     private static final Path CHECKSUM_FILE = Path.of("MMMMM/mods_checksums.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
-    private static final List<ButtonWidget> serverButtons = new ArrayList<>();
     private static Screen lastScreen = null;
 
     @Override
@@ -47,7 +46,6 @@ public class ClientEventHandlers implements ClientModInitializer {
                 Screen current = client.currentScreen;
                 if (current instanceof MultiplayerScreen screen && lastScreen != screen) {
                     lastScreen = screen;
-                    client.execute(() -> addUpdateButtons(screen));
                 } else if (!(current instanceof MultiplayerScreen)) {
                     lastScreen = null;
                 }
@@ -55,28 +53,7 @@ public class ClientEventHandlers implements ClientModInitializer {
         }, "mmmmm-multiplayer-poll").start();
     }
 
-    private static void addUpdateButtons(MultiplayerScreen screen) {
-        serverButtons.clear();
-        ServerList serverList = ((MultiplayerScreenAccessor) screen).getServerList();
-        LOGGER.info("Injecting update buttons for {} servers", serverList.size());
 
-        int buttonX = screen.width - 55;
-        int buttonY = 50;
-        int buttonSpacing = 24;
-        int maxHeight = screen.height - 50;
-        int verticalOffset = -12; // Move button up by 2px
-
-        for (int i = 0; i < serverList.size(); i++) {
-            int yOffset = buttonY + (i * buttonSpacing) + verticalOffset;
-            if (yOffset + 20 > maxHeight) break;
-
-            ServerInfo server = serverList.get(i);
-            ButtonWidget serverButton = createServerButton(buttonX, yOffset, server);
-            ((ScreenInvoker) screen).invokeAddDrawableChild(serverButton);
-            serverButtons.add(serverButton);
-            LOGGER.info("Added update button for server: {}", server.name);
-        }
-    }
 
     private static ButtonWidget createServerButton(int x, int y, ServerInfo server) {
         return ButtonWidget.builder(
@@ -89,7 +66,7 @@ public class ClientEventHandlers implements ClientModInitializer {
         ).dimensions(x, y, 50, 20).build();
     }
 
-    private static void downloadAndProcessMod(String serverUpdateIP) {
+    public static void downloadAndProcessMod(String serverUpdateIP) {
         MinecraftClient minecraft = MinecraftClient.getInstance();
         TitleScreen titleScreen = new TitleScreen();
 
