@@ -40,19 +40,6 @@ public abstract class EditServerScreenMixin {
                 });
 
         screen.children().stream()
-                .forEach(c -> {
-                    if (c instanceof EditBox editBox) {
-                        LOGGER.info("Child: " + editBox.getClass().getName() + " at Y: " + editBox.getY());
-                    } else if (c instanceof net.minecraft.client.gui.components.CycleButton cycleButton) {
-                        LOGGER.info("Child: " + cycleButton.getClass().getName() + " at Y: " + cycleButton.getY());
-                    } else if (c instanceof net.minecraft.client.gui.components.Button button) {
-                        LOGGER.info("Child: " + button.getClass().getName() + " at Y: " + button.getY());
-                    } else {
-                        LOGGER.info("Child: " + c.getClass().getName());
-                    }
-                });
-
-        screen.children().stream()
                 .filter(c -> c instanceof net.minecraft.client.gui.components.CycleButton)
                 .map(c -> (net.minecraft.client.gui.components.CycleButton) c)
                 .filter(button -> button.getMessage().getString().contains("Resource"))
@@ -105,7 +92,6 @@ public abstract class EditServerScreenMixin {
         //graphics.fill(x - 2, labelYPositions[0] + 7, x + 200, labelYPositions[0] + 21, 0xFF0000FF); // Blue background
         graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0], 0xFFFFFFFF);
         graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1], 0xFFFFFFFF);
-        LOGGER.info("Drawing text at X: {}, Y: {}", x, labelYPositions[0] + 9);
 
         // Draw the Download URL label
         graphics.drawString(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xFFFFFFFF);

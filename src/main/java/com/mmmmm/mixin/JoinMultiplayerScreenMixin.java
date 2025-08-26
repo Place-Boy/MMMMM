@@ -1,6 +1,7 @@
 package com.mmmmm.mixin;
 
 import com.mmmmm.client.ClientEventHandlers;
+import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -16,6 +17,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.mmmmm.MMMMM.LOGGER;
+
 @Mixin(JoinMultiplayerScreen.class)
 public class JoinMultiplayerScreenMixin {
 
@@ -27,8 +30,8 @@ public class JoinMultiplayerScreenMixin {
         serverList.load();
 
         int buttonX = screen.width - 55;
-        int buttonY = 50;
-        int buttonSpacing = 24;
+        int buttonY = 40;
+        int buttonSpacing = 35;
         int maxHeight = screen.height - 50;
 
         List<Button> buttonsToAdd = new ArrayList<>();
@@ -64,7 +67,14 @@ public class JoinMultiplayerScreenMixin {
     private Button createServerButton(int x, int y, ServerData server) {
         return Button.builder(
                 Component.literal("Update"),
-                (btn) -> ClientEventHandlers.downloadAndProcessMod(server.ip)
+                (btn) -> {
+                    String downloadIP = ServerMetadata.getMetadata(server.ip); // Fetch the correct download IP
+                    if (downloadIP == null || downloadIP.isBlank()) {
+                        LOGGER.error("No download IP found for server: {}", server.ip);
+                        return;
+                    }
+                    ClientEventHandlers.downloadAndProcessMod(downloadIP); // Use the download IP
+                }
         ).bounds(x, y, 50, 20).build();
     }
 }

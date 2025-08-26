@@ -59,7 +59,7 @@ public class DownloadProgressScreen extends Screen {
         int barX = (this.width - barWidth) / 2;
         int barY = this.height / 2;
 
-        guiGraphics.drawCenteredString(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFFFF);
 
         // Draw the progress bar background
         guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFFAAAAAA); // Gray background
@@ -69,7 +69,7 @@ public class DownloadProgressScreen extends Screen {
         guiGraphics.fill(barX, barY, barX + progressWidth, barY + barHeight, 0xFF00FF00); // Green foreground
 
         // Draw the progress percentage
-        guiGraphics.drawCenteredString(this.font, progress + "%", this.width / 2, barY + 5, 0xFFFFFF);
+        guiGraphics.drawCenteredString(this.font, progress + "%", this.width / 2, barY + 5, 0xFFFFFFFF);
     }
 
     /**

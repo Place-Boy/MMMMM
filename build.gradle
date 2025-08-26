@@ -124,9 +124,16 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
-    implementation 'org.spongepowered:mixin:0.8.5'
-    implementation 'com.moandjiezana.toml:toml4j:0.7.2'
-    implementation('org.json:json:20231013') {
+    implementation ('net.neoforged:minecraft-dependencies:1.21.8') {
+        exclude group: 'net.minidev', module: 'json-smart'
+    }
+    implementation ('org.spongepowered:mixin:0.8.5'){
+        exclude group: 'net.minidev', module: 'json-smart'
+    }
+    implementation ('com.moandjiezana.toml:toml4j:0.7.2'){
+        exclude group: 'net.minidev', module: 'json-smart'
+    }
+    implementation ('org.json:json:20231013'){
         exclude group: 'net.minidev', module: 'json-smart'
     }
 }
@@ -186,6 +193,7 @@ idea {
 
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE // Exclude duplicate files in the jar
+    exclude 'net/minidev/json/annotate/**'
     from {
         configurations.runtimeClasspath
                 .findAll { it.name.contains('toml4j') || it.name.contains('json') } // Include only specific dependencies
@@ -193,4 +201,14 @@ jar {
     }
     // Optionally, exclude META-INF files to avoid duplicates
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+configurations.all {
+    exclude group: 'net.minidev', module: 'json-smart'
+    resolutionStrategy {
+        force 'org.ow2.asm:asm:9.8'
+        force 'org.ow2.asm:asm-commons:9.8'
+        force 'org.ow2.asm:asm-tree:9.8'
+        force 'org.ow2.asm:asm-util:9.8'
+    }
 }
