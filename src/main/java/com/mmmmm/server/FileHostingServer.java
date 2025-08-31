@@ -34,31 +34,30 @@ public class FileHostingServer {
                 String requestPath = exchange.getRequestURI().getPath();
                 MMMMM.LOGGER.info("Received request: " + requestPath);
 
-                // Resolve the requested file path
                 Path filePath = FILE_DIRECTORY.resolve(requestPath.substring(1)).normalize();
 
-                // Security: Ensure the resolved file path is within the allowed directory
                 if (!filePath.startsWith(FILE_DIRECTORY)) {
                     MMMMM.LOGGER.warn("Unauthorized access attempt: " + filePath);
-                    exchange.sendResponseHeaders(403, -1); // Forbidden
+                    exchange.sendResponseHeaders(403, -1);
                     return;
                 }
 
-                // Check if the requested file exists
                 if (!Files.exists(filePath) || Files.isDirectory(filePath)) {
                     MMMMM.LOGGER.warn("File not found: " + filePath);
-                    exchange.sendResponseHeaders(404, -1); // Not Found
+                    exchange.sendResponseHeaders(404, -1);
                     return;
                 }
 
-                // Set Content-Type based on file extension
                 String contentType = requestPath.endsWith(".zip") ? "application/zip" : "application/octet-stream";
                 exchange.getResponseHeaders().add("Content-Type", contentType);
 
-                // Read the file and write it to the HTTP response
-                byte[] fileBytes = Files.readAllBytes(filePath);
-                exchange.sendResponseHeaders(200, fileBytes.length);
-                exchange.getResponseBody().write(fileBytes);
+                long fileSize = Files.size(filePath);
+                exchange.sendResponseHeaders(200, fileSize);
+
+                try (var os = exchange.getResponseBody();
+                     var is = Files.newInputStream(filePath)) {
+                    is.transferTo(os);
+                }
 
                 MMMMM.LOGGER.info("Successfully served file: " + filePath);
 

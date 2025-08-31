@@ -128,11 +128,18 @@ jar {
 
 // Shadow JAR with only external dependencies relocated
 tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
-    archiveClassifier.set("") // overwrite normal jar
+    archiveClassifier.set("")
     relocate 'com.moandjiezana.toml', 'com.mmmmm.shaded.toml'
-    // Exclude your mod classes from relocation (prevents Java 21 classfile errors)
     exclude 'com/mmmmm/**'
+    // Exclude test classes and resources
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    exclude 'test/**', '**/Test*.class', '**/*Test.class'
+    exclude 'net/minecraft/**'
+    exclude 'net/neoforged/**'
+    // Exclude specific libraries if not needed
+    // exclude 'org/json/**'
 }
+
 
 // Make the build task use shadowJar
 tasks.build.dependsOn tasks.shadowJar
