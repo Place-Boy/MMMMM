@@ -21,16 +21,30 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Enumeration;
+import java.nio.file.attribute.FileTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
+import java.util.stream.Collectors;
 
 public class RegisterCommands {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RegisterCommands.class);
+
+    // Use a single executor across runs
+    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private static final HttpClient httpClient = HttpClient.newHttpClient();
+
+    // Cache Modrinth lookups
+    private static final Map<String, Boolean> modrinthCache = new HashMap<>();
+
+    // Track last build time to avoid unnecessary zips
+    private static FileTime lastBuildTime = FileTime.fromMillis(0);
 
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         LOGGER.info("Registering server commands...");
@@ -42,7 +56,10 @@ public class RegisterCommands {
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> {
                             saveModsToZip();
-                            context.getSource().sendSuccess(() -> Component.literal("Mods have been saved to mods.zip in the shared-files directory."), true);
+                            context.getSource().sendSuccess(
+                                    () -> Component.literal("Zipping mods... check console for progress."),
+                                    true
+                            );
                             return 1;
                         })
                 )
@@ -50,45 +67,78 @@ public class RegisterCommands {
     }
 
     public static void saveModsToZip() {
-        ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             Path modsFolder = Path.of("mods");
             Path modsZip = Path.of("MMMMM/shared-files/mods.zip");
-            HttpClient httpClient = HttpClient.newHttpClient();
 
-            var includedMods = new java.util.ArrayList<String>();
-            var excludedMods = new java.util.ArrayList<String>();
+            try {
+                // Get list of .jar mods
+                List<Path> modFiles = Files.walk(modsFolder)
+                        .filter(p -> Files.isRegularFile(p) && p.toString().endsWith(".jar"))
+                        .collect(Collectors.toList());
 
-            try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(modsZip))) {
-                Files.walk(modsFolder).forEach(path -> {
-                    try {
-                        if (Files.isRegularFile(path) && path.toString().endsWith(".jar")) {
+                if (modFiles.isEmpty()) {
+                    LOGGER.warn("No .jar files found in mods folder, skipping zip.");
+                    return;
+                }
+
+                // Check if mods changed since last zip build
+                FileTime latestChange = modFiles.stream()
+                        .map(path -> {
+                            try {
+                                return Files.getLastModifiedTime(path);
+                            } catch (IOException e) {
+                                return FileTime.fromMillis(0);
+                            }
+                        })
+                        .max(FileTime::compareTo)
+                        .orElse(FileTime.fromMillis(0));
+
+                if (latestChange.compareTo(lastBuildTime) <= 0 && Files.exists(modsZip)) {
+                    LOGGER.info("Mods have not changed since last build. Skipping zip creation.");
+                    return;
+                }
+
+                LOGGER.info("Starting mods.zip creation. Found {} mods.", modFiles.size());
+
+                try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(modsZip))) {
+                    int total = modFiles.size();
+                    int index = 0;
+
+                    for (Path path : modFiles) {
+                        index++;
+                        try {
                             String modName = getModNameFromJar(path);
                             if (modName != null) {
-                                boolean isServerOnly = isServerOnlyMod(modName, httpClient);
-                                if (!Config.filterServerSideMods || !isServerOnly) {
+                                boolean exclude = Config.filterServerSideMods && isServerOnlyMod(modName);
+                                if (!exclude) {
                                     Path relativePath = modsFolder.relativize(path);
                                     ZipEntry zipEntry = new ZipEntry(relativePath.toString());
                                     zipOut.putNextEntry(zipEntry);
                                     Files.copy(path, zipOut);
                                     zipOut.closeEntry();
-                                    includedMods.add(modName + " (" + path.getFileName() + ")");
+
+                                    LOGGER.info("[{}/{}] Included mod: {} ({})",
+                                            index, total, modName, path.getFileName());
                                 } else {
-                                    excludedMods.add(modName + " (" + path.getFileName() + ")");
+                                    LOGGER.info("[{}/{}] Excluded mod: {} ({})",
+                                            index, total, modName, path.getFileName());
                                 }
+                            } else {
+                                LOGGER.warn("[{}/{}] Could not identify mod: {}",
+                                        index, total, path.getFileName());
                             }
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to process mod: " + path, e);
                         }
-                    } catch (Exception e) {
-                        LOGGER.error("Failed to process mod: " + path, e);
                     }
-                });
-                LOGGER.info("Successfully created mods.zip in shared-files.");
+                }
+
+                lastBuildTime = latestChange;
+                LOGGER.info("Finished creating mods.zip in shared-files. {} mods processed.", modFiles.size());
+
             } catch (IOException e) {
                 LOGGER.error("Failed to create mods.zip", e);
-            } finally {
-                LOGGER.info("Included mods: {}", includedMods.isEmpty() ? "None" : String.join(", ", includedMods));
-                LOGGER.info("Excluded mods: {}", excludedMods.isEmpty() ? "None" : String.join(", ", excludedMods));
-                executor.shutdown();
             }
         });
     }
@@ -99,30 +149,29 @@ public class RegisterCommands {
             if (entry != null) {
                 try (InputStream is = zipFile.getInputStream(entry)) {
                     Toml toml = new Toml().read(is);
-                    // Try to get display_name at root (not standard for NeoForge, but fallback)
                     String rootDisplayName = toml.getString("display_name");
-                    if (rootDisplayName != null) {
-                        return rootDisplayName;
-                    }
-                    // Correct NeoForge: [[mods]] table
+                    if (rootDisplayName != null) return rootDisplayName;
                     var modsList = toml.getTables("mods");
                     if (modsList != null && !modsList.isEmpty()) {
                         Toml firstMod = modsList.get(0);
                         String modDisplayName = firstMod.getString("displayName");
-                        if (modDisplayName != null) {
-                            LOGGER.info("Found mod name: " + modDisplayName);
-                            return modDisplayName;
-                        }
+                        if (modDisplayName != null) return modDisplayName;
                     }
                 }
             }
-        } catch (IOException e) {
-            LOGGER.error("Failed to read toml from: " + jarPath, e);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to read toml from: " + jarPath + ", using file name as fallback.", e);
+            return jarPath.getFileName().toString();
         }
-        return null;
+        return jarPath.getFileName().toString();
     }
 
-    private static boolean isServerOnlyMod(String modName, HttpClient httpClient) {
+
+    private static boolean isServerOnlyMod(String modName) {
+        if (modrinthCache.containsKey(modName)) {
+            return modrinthCache.get(modName);
+        }
+
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.modrinth.com/v2/search?query=" + URLEncoder.encode(modName, "UTF-8")))
@@ -140,14 +189,15 @@ public class RegisterCommands {
                 String clientSide = mod.has("client_side") ? mod.get("client_side").getAsString() : "required";
                 String serverSide = mod.has("server_side") ? mod.get("server_side").getAsString() : "required";
 
-                // Exclude if client_side is "unsupported" and server_side is "required"
-                return "unsupported".equalsIgnoreCase(clientSide) && "required".equalsIgnoreCase(serverSide);
+                boolean result = "unsupported".equalsIgnoreCase(clientSide) && "required".equalsIgnoreCase(serverSide);
+                modrinthCache.put(modName, result);
+                return result;
             }
         } catch (Exception e) {
             LOGGER.error("Failed to query Modrinth for: " + modName, e);
         }
-        return false; // Default to including if unknown
+
+        modrinthCache.put(modName, false);
+        return false;
     }
-
-
 }
