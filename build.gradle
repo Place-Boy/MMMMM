@@ -130,8 +130,6 @@ jar {
 tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
     archiveClassifier.set("") // overwrite normal jar
     relocate 'com.moandjiezana.toml', 'com.mmmmm.shaded.toml'
-    relocate 'org.json', 'com.mmmmm.shaded.json'
-
     // Exclude your mod classes from relocation (prevents Java 21 classfile errors)
     exclude 'com/mmmmm/**'
 }

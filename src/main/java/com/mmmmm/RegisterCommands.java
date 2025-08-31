@@ -1,13 +1,14 @@
 package com.mmmmm;
 
+import com.google.gson.JsonParser;
 import com.moandjiezana.toml.Toml;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,13 +129,17 @@ public class RegisterCommands {
                     .header("User-Agent", "Place-Boy/https://github.com/Place-Boy/MMMMM/1.0.1-beta")
                     .GET()
                     .build();
+
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            JSONObject json = new JSONObject(response.body());
-            JSONArray hits = json.getJSONArray("hits");
-            if (hits.length() > 0) {
-                JSONObject mod = hits.getJSONObject(0);
-                String clientSide = mod.optString("client_side", "required");
-                String serverSide = mod.optString("server_side", "required");
+            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+            JsonArray hits = json.getAsJsonArray("hits");
+
+            if (hits != null && hits.size() > 0) {
+                JsonObject mod = hits.get(0).getAsJsonObject();
+
+                String clientSide = mod.has("client_side") ? mod.get("client_side").getAsString() : "required";
+                String serverSide = mod.has("server_side") ? mod.get("server_side").getAsString() : "required";
+
                 // Exclude if client_side is "unsupported" and server_side is "required"
                 return "unsupported".equalsIgnoreCase(clientSide) && "required".equalsIgnoreCase(serverSide);
             }
@@ -143,5 +148,6 @@ public class RegisterCommands {
         }
         return false; // Default to including if unknown
     }
+
 
 }
