@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.*;
@@ -195,12 +196,23 @@ public class ClientEventHandlers implements ClientModInitializer {
                     Files.createDirectories(entryPath);
                 } else {
                     Files.createDirectories(entryPath.getParent());
-                    Files.copy(zipInputStream, entryPath, StandardCopyOption.REPLACE_EXISTING);
+                    // Write to a temp file first to avoid locking issues
+                    Path tempFile = Files.createTempFile(entryPath.getParent(), entryPath.getFileName().toString(), ".tmp");
+                    try (OutputStream out = Files.newOutputStream(tempFile, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                        byte[] buffer = new byte[8192];
+                        int len;
+                        while ((len = zipInputStream.read(buffer)) > 0) {
+                            out.write(buffer, 0, len);
+                        }
+                    }
+                    // Atomically move temp file to destination
+                    Files.move(tempFile, entryPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
                 }
                 zipInputStream.closeEntry();
             }
         }
     }
+
 
     private static void saveUpdatedChecksums() throws Exception {
         LOGGER.info("Saving updated checksums...");
