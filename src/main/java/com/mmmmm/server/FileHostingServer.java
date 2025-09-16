@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.Executors;
 
 /**
  * Manages the file hosting server for ExampleMod.
@@ -73,6 +74,7 @@ public class FileHostingServer {
             }
         });
 
+        fileHostingServer.setExecutor(Executors.newCachedThreadPool()); // Enable concurrent downloads
         // Start the server on a separate thread
         new Thread(() -> {
             fileHostingServer.start();
