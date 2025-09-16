@@ -9,7 +9,7 @@ public class Config {
     public static boolean filterServerSideMods = false;
 
     public static void registerConfig() {
-        Path configPath = Path.of("config", "mmmmm");
+        Path configPath = Path.of("config", "mmmmm.toml");
         try {
             if (!Files.exists(configPath)) {
                 Files.createDirectories(configPath.getParent());

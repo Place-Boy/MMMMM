@@ -86,9 +86,10 @@ public class RegisterCommands {
                     for (Path path : modFiles) {
                         index++;
                         try {
-                            String modName = getModNameFromJar(path); // Implement for Fabric
-                            if (modName != null) {
-                                boolean exclude = Config.filterServerSideMods && isServerOnlyMod(modName);
+                            String modId = getModIdFromJar(path);
+                            String modName = getModNameFromJar(path);
+                            if (modId != null) {
+                                boolean exclude = Config.filterServerSideMods && isServerOnlyMod(modId, modName);
                                 if (!exclude) {
                                     Path relativePath = modsFolder.relativize(path);
                                     ZipEntry zipEntry = new ZipEntry(relativePath.toString());
@@ -97,10 +98,10 @@ public class RegisterCommands {
                                     zipOut.closeEntry();
 
                                     LOGGER.info("[{}/{}] Included mod: {} ({})",
-                                            index, total, modName, path.getFileName());
+                                            index, total, modName != null ? modName : modId, path.getFileName());
                                 } else {
                                     LOGGER.info("[{}/{}] Excluded server-only mod: {} ({})",
-                                            index, total, modName, path.getFileName());
+                                            index, total, modName != null ? modName : modId, path.getFileName());
                                 }
                             } else {
                                 LOGGER.warn("[{}/{}] Could not identify mod: {}",
@@ -123,62 +124,99 @@ public class RegisterCommands {
         return 1;
     }
 
+    /**
+     * Reads fabric.mod.json from the JAR and returns the mod id.
+     */
+    private static String getModIdFromJar(Path jarPath) {
+        try (FileSystem fs = FileSystems.newFileSystem(jarPath, (ClassLoader) null)) {
+            Path modJson = fs.getPath("fabric.mod.json");
+            if (Files.exists(modJson)) {
+                String json = Files.readString(modJson);
+                JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+                if (obj.has("id")) {
+                    return obj.get("id").getAsString();
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to read mod id from: " + jarPath, e);
+        }
+        return null;
+    }
 
     /**
-     * Reads fabric.mod.json from the JAR and returns the mod id or name.
+     * Reads fabric.mod.json from the JAR and returns the mod name.
      */
     private static String getModNameFromJar(Path jarPath) {
         try (FileSystem fs = FileSystems.newFileSystem(jarPath, (ClassLoader) null)) {
             Path modJson = fs.getPath("fabric.mod.json");
             if (Files.exists(modJson)) {
                 String json = Files.readString(modJson);
-                // Use a JSON library for production; here is a simple parse:
-                int idIndex = json.indexOf("\"id\"");
-                if (idIndex != -1) {
-                    int colon = json.indexOf(':', idIndex);
-                    int quote1 = json.indexOf('"', colon);
-                    int quote2 = json.indexOf('"', quote1 + 1);
-                    return json.substring(quote1 + 1, quote2);
+                JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+                if (obj.has("name")) {
+                    LOGGER.info("Found mod name: {}", obj.get("name").getAsString());
+                    return obj.get("name").getAsString();
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            LOGGER.error("Failed to read mod name from: " + jarPath, e);
+        }
         return null;
     }
 
     /**
      * Checks if the mod is server-side only by querying Modrinth API.
      */
-    private static boolean isServerOnlyMod(String modName) {
-        if (modrinthCache.containsKey(modName)) {
-            return modrinthCache.get(modName);
+    private static boolean isServerOnlyMod(String modId, String modName) {
+        if (modrinthCache.containsKey(modId)) {
+            return modrinthCache.get(modId);
         }
 
+        boolean result = false;
         try {
-            String url = "https://api.modrinth.com/v2/search?query=" + URLEncoder.encode(modName, "UTF-8");
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("User-Agent", "Place-Boy/https://github.com/Place-Boy/MMMMM/1.0.1-beta")
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-            JsonArray hits = json.getAsJsonArray("hits");
-
-            if (hits != null && hits.size() > 0) {
-                JsonObject mod = hits.get(0).getAsJsonObject();
-                String clientSide = mod.has("client_side") ? mod.get("client_side").getAsString() : "required";
-                String serverSide = mod.has("server_side") ? mod.get("server_side").getAsString() : "required";
-                boolean result = "unsupported".equalsIgnoreCase(clientSide) && "required".equalsIgnoreCase(serverSide);
-                modrinthCache.put(modName, result);
-                return result;
+            // Try searching by mod id
+            result = checkModrinthServerOnly(modId, modId, modName);
+            // If not found, try searching by mod name
+            if (!result && modName != null && !modName.isBlank()) {
+                result = checkModrinthServerOnly(modName, modId, modName);
             }
         } catch (Exception e) {
-            LOGGER.error("Failed to query Modrinth for: " + modName, e);
+            LOGGER.error("Failed to query Modrinth for: " + modId, e);
         }
-
-        modrinthCache.put(modName, false);
-        return false;
+        modrinthCache.put(modId, result);
+        return result;
     }
 
+    private static boolean checkModrinthServerOnly(String query, String modId, String modName) throws Exception {
+        String facets = URLEncoder.encode("[[\"project_type:mod\"]]", "UTF-8");
+        String url = "https://api.modrinth.com/v2/search"
+                + "?query=" + URLEncoder.encode(query, "UTF-8")
+                + "&facets=" + facets
+                + "&index=downloads"
+                + "&limit=5";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("User-Agent", "Place-Boy/https://github.com/Place-Boy/MMMMM/1.0.1-beta")
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+        JsonArray hits = json.getAsJsonArray("hits");
+
+        if (hits != null && hits.size() > 0) {
+            for (int i = 0; i < hits.size(); i++) {
+                JsonObject mod = hits.get(i).getAsJsonObject();
+                String slug = mod.has("slug") ? mod.get("slug").getAsString() : "";
+                String projectId = mod.has("project_id") ? mod.get("project_id").getAsString() : "";
+                String title = mod.has("title") ? mod.get("title").getAsString() : "";
+                if (slug.equalsIgnoreCase(modId) || slug.equalsIgnoreCase(modName)
+                        || projectId.equalsIgnoreCase(modId) || title.equalsIgnoreCase(modName)) {
+                    String clientSide = mod.has("client_side") ? mod.get("client_side").getAsString() : "required";
+                    String serverSide = mod.has("server_side") ? mod.get("server_side").getAsString() : "required";
+                    return "unsupported".equalsIgnoreCase(clientSide) && "required".equalsIgnoreCase(serverSide);
+                }
+            }
+        }
+        return false;
+    }
 }
