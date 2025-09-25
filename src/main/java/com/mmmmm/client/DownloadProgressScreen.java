@@ -11,7 +11,10 @@ public class DownloadProgressScreen extends Screen {
     private final String serverUpdateIP; // Use the correct server update IP
     private int progress = 0; // Progress percentage (0-100)
     private String downloadSpeed = "0 KB/s"; // Download speed
+    private String estimatedTimeRemaining = ""; // Estimated time remaining
     private Button cancelButton; // Cancel button
+    private boolean isExtracting = false; // Indicates if extraction is in progress
+    private String extractionMessage = ""; // Message shown during extraction
 
 
     public DownloadProgressScreen(String serverIP) {
@@ -45,6 +48,28 @@ public class DownloadProgressScreen extends Screen {
         return isCancelled;
     }
 
+    /**
+     * Updates the progress bar, download speed, and estimated time remaining.
+     *
+     * @param progress      The current progress (0-100).
+     * @param downloadSpeed The current download speed in KB/s.
+     * @param estimatedTimeRemaining Estimated time remaining (optional).
+     */
+    public void updateProgress(int progress, String downloadSpeed, String estimatedTimeRemaining) {
+        this.progress = Math.min(100, Math.max(0, progress)); // Clamp progress between 0 and 100
+        this.downloadSpeed = downloadSpeed;
+        this.estimatedTimeRemaining = estimatedTimeRemaining;
+    }
+
+    /**
+     * Call this when extraction starts after download finishes.
+     * Shows extraction info including last download speed.
+     */
+    public void startExtraction(String extractionMessage) {
+        this.isExtracting = true;
+        this.extractionMessage = extractionMessage + " (Last download speed: " + downloadSpeed + ")";
+    }
+
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTicks);
@@ -54,14 +79,21 @@ public class DownloadProgressScreen extends Screen {
         // Draw the title with the correct server update IP
         guiGraphics.drawCenteredString(this.font, "Downloading mods from " + serverUpdateIP, this.width / 2, 20, 0xFFFFFF);
 
-
-        // Draw the download speed above the progress bar
         int barWidth = 200;
         int barHeight = 20;
         int barX = (this.width - barWidth) / 2;
         int barY = this.height / 2;
 
-        guiGraphics.drawCenteredString(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFF);
+        if (isExtracting) {
+            guiGraphics.drawCenteredString(this.font, extractionMessage, this.width / 2, barY - 30, 0xFFFFFF);
+        } else {
+            // Draw the download speed above the progress bar
+            guiGraphics.drawCenteredString(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFF);
+            // Draw estimated time remaining if available
+            if (!estimatedTimeRemaining.isEmpty()) {
+                guiGraphics.drawCenteredString(this.font, "ETA: " + estimatedTimeRemaining, this.width / 2, barY - 55, 0xFFFFFF);
+            }
+        }
 
         // Draw the progress bar background
         guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFFAAAAAA); // Gray background
@@ -74,16 +106,5 @@ public class DownloadProgressScreen extends Screen {
         guiGraphics.drawCenteredString(this.font, progress + "%", this.width / 2, barY + 5, 0xFFFFFF);
 
         // The cancel button is already positioned below the progress bar in the `init` method
-    }
-
-    /**
-     * Updates the progress bar and download speed.
-     *
-     * @param progress      The current progress (0-100).
-     * @param downloadSpeed The current download speed in KB/s.
-     */
-    public void updateProgress(int progress, String downloadSpeed) {
-        this.progress = Math.min(100, Math.max(0, progress)); // Clamp progress between 0 and 100
-        this.downloadSpeed = downloadSpeed;
     }
 }

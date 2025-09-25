@@ -108,6 +108,8 @@ public class ClientEventHandlers {
                 HttpURLConnection connection = initializeConnection(finalModsUrl);
                 downloadFileWithProgress(connection, MOD_DOWNLOAD_PATH, progressScreen);
 
+                // Show extracting mods message
+                minecraft.execute(() -> progressScreen.startExtraction("Extracting mods..."));
                 validateDownloadedFile();
                 prepareDestinationDirectory();
                 compareChecksumsIfExists();
@@ -173,7 +175,19 @@ public class ClientEventHandlers {
                         ? String.format("%.2f MB/s", speedInKB / 1024)
                         : String.format("%.2f KB/s", speedInKB);
 
-                progressScreen.updateProgress(progress, speed);
+                // Calculate ETA
+                long bytesRemaining = totalBytes - downloadedBytes;
+                double secondsRemaining = (speedInKB > 0) ? (bytesRemaining / 1024.0) / speedInKB : 0.0;
+                String eta;
+                if (secondsRemaining > 0) {
+                    int minutes = (int) (secondsRemaining / 60);
+                    int seconds = (int) (secondsRemaining % 60);
+                    eta = String.format("%dm %ds", minutes, seconds);
+                } else {
+                    eta = "Calculating...";
+                }
+
+                progressScreen.updateProgress(progress, speed, eta);
             }
         }
     }
