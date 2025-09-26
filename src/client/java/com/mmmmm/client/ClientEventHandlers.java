@@ -72,41 +72,74 @@ public class ClientEventHandlers implements ClientModInitializer {
         TitleScreen titleScreen = new TitleScreen();
 
         String modsUrl = serverUpdateIP;
+        // Default to HTTPS, fall back to HTTP if HTTPS fails
         if (modsUrl == null || modsUrl.isBlank()) {
             LOGGER.info("No mod URL found for " + serverUpdateIP);
             return;
         }
 
-        if (!modsUrl.startsWith("http://") && !modsUrl.startsWith("https://")) {
-            modsUrl = "http://" + modsUrl;
+        String httpsUrl, httpUrl;
+        if (modsUrl.startsWith("http://") || modsUrl.startsWith("https://")) {
+            if (!modsUrl.endsWith("/mods.zip")) {
+                modsUrl += "/mods.zip";
+            }
+            httpsUrl = modsUrl.startsWith("https://") ? modsUrl : null;
+            httpUrl = modsUrl.startsWith("http://") ? modsUrl : null;
+        } else {
+            httpsUrl = "https://" + modsUrl + "/mods.zip";
+            httpUrl = "http://" + modsUrl + "/mods.zip";
         }
-
-        if (!modsUrl.endsWith("/mods.zip")) {
-            modsUrl += "/mods.zip";
-        }
-
-        final String finalModsUrl = modsUrl;
 
         DownloadProgressScreen progressScreen = new DownloadProgressScreen(modsUrl);
         minecraft.setScreen(progressScreen);
 
         Executors.newSingleThreadExecutor().execute(() -> {
+            String attemptedUrl = httpsUrl != null ? httpsUrl : httpUrl;
+            boolean triedHttps = false;
+            boolean triedHttp = false;
             try {
-                LOGGER.info("Starting mod download from: {}", finalModsUrl);
+                HttpURLConnection connection = null;
+                IOException lastException = null;
+                // Try HTTPS first if available
+                if (httpsUrl != null) {
+                    attemptedUrl = httpsUrl;
+                    triedHttps = true;
+                    try {
+                        LOGGER.info("Starting mod download from (HTTPS): {}", httpsUrl);
+                        connection = initializeConnection(httpsUrl);
+                    } catch (IOException e) {
+                        LOGGER.warn("HTTPS download failed, will try HTTP: {}", e.getMessage());
+                        lastException = e;
+                    }
+                }
+                // If HTTPS failed, try HTTP
+                if (connection == null && httpUrl != null) {
+                    attemptedUrl = httpUrl;
+                    triedHttp = true;
+                    try {
+                        LOGGER.info("Starting mod download from (HTTP): {}", httpUrl);
+                        connection = initializeConnection(httpUrl);
+                    } catch (IOException e) {
+                        lastException = e;
+                    }
+                }
+                if (connection == null) {
+                    throw new IOException("Failed to connect to mod download URL via HTTPS and HTTP", lastException);
+                }
 
-                HttpURLConnection connection = initializeConnection(finalModsUrl);
                 downloadFileWithProgress(connection, MOD_DOWNLOAD_PATH, progressScreen);
-
                 validateDownloadedFile();
                 prepareDestinationDirectory();
                 compareChecksumsIfExists();
                 extractZipFile();
                 saveUpdatedChecksums();
 
-                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
+                String protocolMsg = triedHttps && !triedHttp ? "HTTPS" : (triedHttp ? "HTTP" : "");
+                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "! (" + protocolMsg + ")");
             } catch (Exception e) {
-                LOGGER.error("Failed to download or extract mods", e);
+                LOGGER.error("Failed to download or extract mods from " + attemptedUrl, e);
                 sendPlayerMessage("Failed to download or extract mods for " + serverUpdateIP + ". Check logs for more details.");
+                cleanupTempFiles(UNZIP_DESTINATION); // Cleanup leftover .tmp files
             } finally {
                 minecraft.execute(() -> minecraft.setScreen(titleScreen));
             }
@@ -205,14 +238,48 @@ public class ClientEventHandlers implements ClientModInitializer {
                             out.write(buffer, 0, len);
                         }
                     }
-                    // Atomically move temp file to destination
-                    Files.move(tempFile, entryPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                    // Atomically move temp file to destination, with retry for Windows lock issues
+                    boolean moved = false;
+                    int attempts = 0;
+                    IOException lastException = null;
+                    while (!moved && attempts < 5) {
+                        try {
+                            Files.move(tempFile, entryPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                            moved = true;
+                        } catch (IOException ex) {
+                            lastException = ex;
+                            attempts++;
+                            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                        }
+                    }
+                    if (!moved) {
+                        // Cleanup temp file if move fails
+                        try { Files.deleteIfExists(tempFile); } catch (IOException ignored) {}
+                        throw new IOException("Failed to move temp file to destination after retries: " + entryPath, lastException);
+                    }
                 }
                 zipInputStream.closeEntry();
             }
         }
     }
 
+    // Cleanup leftover .tmp files in the mods directory
+    private static void cleanupTempFiles(Path directory) {
+        try {
+            Files.walk(directory)
+                .filter(p -> p.getFileName().toString().endsWith(".tmp"))
+                .forEach(p -> {
+                    try {
+                        Files.deleteIfExists(p);
+                        LOGGER.info("Deleted leftover temp file: {}", p);
+                    } catch (IOException e) {
+                        LOGGER.warn("Failed to delete temp file: {}", p);
+                    }
+                });
+        } catch (IOException e) {
+            LOGGER.warn("Failed to clean up temp files in {}", directory);
+        }
+    }
 
     private static void saveUpdatedChecksums() throws Exception {
         LOGGER.info("Saving updated checksums...");
