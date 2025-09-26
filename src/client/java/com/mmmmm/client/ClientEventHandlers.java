@@ -229,33 +229,45 @@ public class ClientEventHandlers implements ClientModInitializer {
                     Files.createDirectories(entryPath);
                 } else {
                     Files.createDirectories(entryPath.getParent());
-                    // Write to a temp file first to avoid locking issues
-                    Path tempFile = Files.createTempFile(entryPath.getParent(), entryPath.getFileName().toString(), ".tmp");
-                    try (OutputStream out = Files.newOutputStream(tempFile, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
-                        byte[] buffer = new byte[8192];
-                        int len;
-                        while ((len = zipInputStream.read(buffer)) > 0) {
-                            out.write(buffer, 0, len);
+                    Path tempFile = null;
+                    try {
+                        // Write to a temp file first to avoid locking issues
+                        tempFile = Files.createTempFile(entryPath.getParent(), entryPath.getFileName().toString(), ".tmp");
+                        try (OutputStream out = Files.newOutputStream(tempFile, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                            byte[] buffer = new byte[8192];
+                            int len;
+                            while ((len = zipInputStream.read(buffer)) > 0) {
+                                out.write(buffer, 0, len);
+                            }
                         }
-                    }
-                    // Atomically move temp file to destination, with retry for Windows lock issues
-                    boolean moved = false;
-                    int attempts = 0;
-                    IOException lastException = null;
-                    while (!moved && attempts < 5) {
-                        try {
-                            Files.move(tempFile, entryPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-                            moved = true;
-                        } catch (IOException ex) {
-                            lastException = ex;
-                            attempts++;
-                            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                        // Atomically move temp file to destination, with retry for Windows lock issues
+                        boolean moved = false;
+                        int attempts = 0;
+                        IOException lastException = null;
+                        while (!moved && attempts < 5) {
+                            try {
+                                Files.move(tempFile, entryPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                                moved = true;
+                            } catch (IOException ex) {
+                                lastException = ex;
+                                attempts++;
+                                if (ex instanceof AccessDeniedException) {
+                                    LOGGER.error("Access denied when moving {}. This file may be locked by Minecraft. Skipping this mod file.", entryPath);
+                                    sendPlayerMessage("Failed to update mod file: " + entryPath.getFileName() + ". It may be locked by Minecraft. Skipping this file.");
+                                }
+                                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                            }
                         }
-                    }
-                    if (!moved) {
-                        // Cleanup temp file if move fails
-                        try { Files.deleteIfExists(tempFile); } catch (IOException ignored) {}
-                        throw new IOException("Failed to move temp file to destination after retries: " + entryPath, lastException);
+                        if (!moved) {
+                            throw new IOException("Failed to move temp file to destination after retries: " + entryPath, lastException);
+                        }
+                    } catch (Exception ex) {
+                        LOGGER.error("Failed to extract mod file {}: {}", entryPath, ex.getMessage());
+                        sendPlayerMessage("Failed to extract mod file: " + entryPath.getFileName() + ". Skipping.");
+                        if (tempFile != null) {
+                            try { Files.deleteIfExists(tempFile); } catch (IOException ignored) {}
+                        }
+                        // Continue to next entry
                     }
                 }
                 zipInputStream.closeEntry();
