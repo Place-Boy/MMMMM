@@ -130,6 +130,7 @@ jar {
 tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
     archiveClassifier.set("")
     relocate 'com.moandjiezana.toml', 'com.mmmmm.shaded.toml'
+    relocate 'com.moandjiezana.github.oshi', 'com.mmmmm.github.oshi'
     exclude 'com/mmmmm/**'
     // Exclude test classes and resources
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
