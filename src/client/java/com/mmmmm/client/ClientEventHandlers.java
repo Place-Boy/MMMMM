@@ -15,13 +15,16 @@ import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -94,40 +97,69 @@ public class ClientEventHandlers implements ClientModInitializer {
         TitleScreen titleScreen = new TitleScreen();
 
         String modsUrl = serverUpdateIP;
+        // Default to HTTPS, fall back to HTTP if HTTPS fails
         if (modsUrl == null || modsUrl.isBlank()) {
             LOGGER.info("No mod URL found for " + serverUpdateIP);
             return;
         }
 
-        if (!modsUrl.startsWith("http://") && !modsUrl.startsWith("https://")) {
-            modsUrl = "http://" + modsUrl;
+        String httpsUrl, httpUrl;
+        if (modsUrl.startsWith("http://") || modsUrl.startsWith("https://")) {
+            if (!modsUrl.endsWith("/mods.zip")) {
+                modsUrl += "/mods.zip";
+            }
+            httpsUrl = modsUrl.startsWith("https://") ? modsUrl : null;
+            httpUrl = modsUrl.startsWith("http://") ? modsUrl : null;
+        } else {
+            httpsUrl = "https://" + modsUrl + "/mods.zip";
+            httpUrl = "http://" + modsUrl + "/mods.zip";
         }
-
-        if (!modsUrl.endsWith("/mods.zip")) {
-            modsUrl += "/mods.zip";
-        }
-
-        final String finalModsUrl = modsUrl;
 
         DownloadProgressScreen progressScreen = new DownloadProgressScreen(modsUrl);
         minecraft.setScreen(progressScreen);
 
         Executors.newSingleThreadExecutor().execute(() -> {
+            String attemptedUrl = httpsUrl != null ? httpsUrl : httpUrl;
+            boolean triedHttps = false;
+            boolean triedHttp = false;
             try {
-                LOGGER.info("Starting mod download from: {}", finalModsUrl);
+                HttpURLConnection connection = null;
+                IOException lastException = null;
+                // Try HTTPS first if available
+                if (httpsUrl != null) {
+                    attemptedUrl = httpsUrl;
+                    triedHttps = true;
+                    try {
+                        LOGGER.info("Starting mod download from (HTTPS): {}", httpsUrl);
+                        connection = initializeConnection(httpsUrl);
+                    } catch (IOException e) {
+                        LOGGER.warn("HTTPS download failed, will try HTTP: {}", e.getMessage());
+                        lastException = e;
+                    }
+                }
+                // If HTTPS failed, try HTTP
+                if (connection == null && httpUrl != null) {
+                    attemptedUrl = httpUrl;
+                    triedHttp = true;
+                    try {
+                        LOGGER.info("Starting mod download from (HTTP): {}", httpUrl);
+                        connection = initializeConnection(httpUrl);
+                    } catch (IOException e) {
+                        lastException = e;
+                    }
+                }
+                if (connection == null) {
+                    throw new IOException("Failed to connect to mod download URL via HTTPS and HTTP", lastException);
+                }
 
-                HttpURLConnection connection = initializeConnection(finalModsUrl);
                 downloadFileWithProgress(connection, MOD_DOWNLOAD_PATH, progressScreen);
-
                 validateDownloadedFile();
                 prepareDestinationDirectory();
-                compareChecksumsIfExists();
                 extractZipFile();
-                saveUpdatedChecksums();
-
+                updateChecksumsAndDeleteOutdated();
                 sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
             } catch (Exception e) {
-                LOGGER.error("Failed to download or extract mods", e);
+                LOGGER.error("Failed to download or extract mods from " + attemptedUrl, e);
                 sendPlayerMessage("Failed to download or extract mods for " + serverUpdateIP + ". Check logs for more details.");
             } finally {
                 minecraft.execute(() -> minecraft.setScreen(titleScreen));
@@ -200,14 +232,11 @@ public class ClientEventHandlers implements ClientModInitializer {
         }
     }
 
-    private static void compareChecksumsIfExists() throws Exception {
-        if (Files.exists(CHECKSUM_FILE)) {
-            LOGGER.info("Comparing checksums...");
-            Checksum.compareChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
-        }
-    }
+    // Store the set of extracted mod file names for deletion logic
+    private static final java.util.Set<String> extractedModFiles = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
     private static void extractZipFile() throws IOException {
+        extractedModFiles.clear();
         try (InputStream fileInputStream = Files.newInputStream(MOD_DOWNLOAD_PATH);
              ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
 
@@ -218,21 +247,71 @@ public class ClientEventHandlers implements ClientModInitializer {
                     Files.createDirectories(entryPath);
                 } else {
                     Files.createDirectories(entryPath.getParent());
-                    Files.copy(zipInputStream, entryPath, StandardCopyOption.REPLACE_EXISTING);
+                    try (OutputStream out = Files.newOutputStream(entryPath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                        byte[] buffer = new byte[8192];
+                        int len;
+                        while ((len = zipInputStream.read(buffer)) > 0) {
+                            out.write(buffer, 0, len);
+                        }
+                    } catch (java.nio.file.AccessDeniedException ade) {
+                        LOGGER.warn("Access denied when writing {}. Scheduling for deletion on JVM exit.", entryPath);
+                        sendPlayerMessage("File locked: " + entryPath.getFileName() + ". Will be deleted on exit.");
+                        try {
+                            forceDeleteOnExit(entryPath.toFile());
+                        } catch (IOException ioe) {
+                            LOGGER.error("Failed to schedule {} for deletion on exit: {}", entryPath, ioe.getMessage());
+                        }
+                        // Continue to next entry
+                    }
+                    // Track only .jar files for deletion logic
+                    if (entryPath.getFileName().toString().endsWith(".jar")) {
+                        extractedModFiles.add(entryPath.getFileName().toString());
+                    }
                 }
                 zipInputStream.closeEntry();
             }
         }
     }
 
-    private static void saveUpdatedChecksums() throws Exception {
-        LOGGER.info("Saving updated checksums...");
+    private static void updateChecksumsAndDeleteOutdated() throws Exception {
+        // Remove files in mods folder not present in extractedModFiles
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(UNZIP_DESTINATION, "*.jar")) {
+            for (Path modFile : stream) {
+                String fileName = modFile.getFileName().toString();
+                if (!extractedModFiles.contains(fileName)) {
+                    Files.deleteIfExists(modFile);
+                    LOGGER.info("Deleted outdated mod: {}", fileName);
+                }
+            }
+        }
+        // Save new checksums for all current files
         Checksum.saveChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
     }
 
+    /**
+     * Schedules a file or directory (recursively) for deletion on JVM exit.
+     * @param file file or directory to delete, must not be null
+     * @throws NullPointerException if the file is null
+     * @throws IOException if scheduling deletion is unsuccessful
+     */
+    public static void forceDeleteOnExit(File file) throws IOException {
+        if (file == null) throw new NullPointerException("File must not be null");
+        if (!file.exists()) return;
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    forceDeleteOnExit(child);
+                }
+            }
+        }
+        file.deleteOnExit();
+    }
+
     private static void sendPlayerMessage(String message) {
-        if (MinecraftClient.getInstance().player != null) {
-            MinecraftClient.getInstance().player.sendMessage(Text.literal(message));
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player != null && client.player.getServer() != null) {
+            client.player.sendMessage(Text.literal(message), false);
         }
     }
 }
