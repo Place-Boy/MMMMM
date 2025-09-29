@@ -24,6 +24,7 @@ import java.net.URL;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -208,7 +209,11 @@ public class ClientEventHandlers implements ClientModInitializer {
         }
     }
 
+    // Store the set of extracted mod file names for deletion logic
+    private static final java.util.Set<String> extractedModFiles = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+
     private static void extractZipFile() throws IOException {
+        extractedModFiles.clear();
         try (InputStream fileInputStream = Files.newInputStream(MOD_DOWNLOAD_PATH);
              ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
 
@@ -225,6 +230,19 @@ public class ClientEventHandlers implements ClientModInitializer {
                         while ((len = zipInputStream.read(buffer)) > 0) {
                             out.write(buffer, 0, len);
                         }
+                    } catch (java.nio.file.AccessDeniedException ade) {
+                        LOGGER.warn("Access denied when writing {}. Scheduling for deletion on JVM exit.", entryPath);
+                        sendPlayerMessage("File locked: " + entryPath.getFileName() + ". Will be deleted on exit.");
+                        try {
+                            forceDeleteOnExit(entryPath.toFile());
+                        } catch (IOException ioe) {
+                            LOGGER.error("Failed to schedule {} for deletion on exit: {}", entryPath, ioe.getMessage());
+                        }
+                        // Continue to next entry
+                    }
+                    // Track only .jar files for deletion logic
+                    if (entryPath.getFileName().toString().endsWith(".jar")) {
+                        extractedModFiles.add(entryPath.getFileName().toString());
                     }
                 }
                 zipInputStream.closeEntry();
@@ -233,20 +251,38 @@ public class ClientEventHandlers implements ClientModInitializer {
     }
 
     private static void updateChecksumsAndDeleteOutdated() throws Exception {
-        // Compute new checksums from extracted files
-        var newChecksums = Checksum.computeChecksums(UNZIP_DESTINATION);
-        // Remove files in mods folder not present in newChecksums
+        // Remove files in mods folder not present in extractedModFiles
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(UNZIP_DESTINATION, "*.jar")) {
             for (Path modFile : stream) {
                 String fileName = modFile.getFileName().toString();
-                if (!newChecksums.containsKey(fileName)) {
+                if (!extractedModFiles.contains(fileName)) {
                     Files.deleteIfExists(modFile);
                     LOGGER.info("Deleted outdated mod: {}", fileName);
                 }
             }
         }
-        // Save new checksums
+        // Save new checksums for all current files
         Checksum.saveChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
+    }
+
+    /**
+     * Schedules a file or directory (recursively) for deletion on JVM exit.
+     * @param file file or directory to delete, must not be null
+     * @throws NullPointerException if the file is null
+     * @throws IOException if scheduling deletion is unsuccessful
+     */
+    public static void forceDeleteOnExit(File file) throws IOException {
+        if (file == null) throw new NullPointerException("File must not be null");
+        if (!file.exists()) return;
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    forceDeleteOnExit(child);
+                }
+            }
+        }
+        file.deleteOnExit();
     }
 
     private static void sendPlayerMessage(String message) {
