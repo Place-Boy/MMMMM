@@ -15,6 +15,7 @@ import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -130,16 +131,12 @@ public class ClientEventHandlers implements ClientModInitializer {
                 downloadFileWithProgress(connection, MOD_DOWNLOAD_PATH, progressScreen);
                 validateDownloadedFile();
                 prepareDestinationDirectory();
-                compareChecksumsIfExists();
                 extractZipFile();
-                saveUpdatedChecksums();
-
-                String protocolMsg = triedHttps && !triedHttp ? "HTTPS" : (triedHttp ? "HTTP" : "");
-                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "! (" + protocolMsg + ")");
+                updateChecksumsAndDeleteOutdated();
+                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
             } catch (Exception e) {
                 LOGGER.error("Failed to download or extract mods from " + attemptedUrl, e);
                 sendPlayerMessage("Failed to download or extract mods for " + serverUpdateIP + ". Check logs for more details.");
-                cleanupTempFiles(UNZIP_DESTINATION); // Cleanup leftover .tmp files
             } finally {
                 minecraft.execute(() -> minecraft.setScreen(titleScreen));
             }
@@ -211,13 +208,6 @@ public class ClientEventHandlers implements ClientModInitializer {
         }
     }
 
-    private static void compareChecksumsIfExists() throws Exception {
-        if (Files.exists(CHECKSUM_FILE)) {
-            LOGGER.info("Comparing checksums...");
-            Checksum.compareChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
-        }
-    }
-
     private static void extractZipFile() throws IOException {
         try (InputStream fileInputStream = Files.newInputStream(MOD_DOWNLOAD_PATH);
              ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
@@ -229,45 +219,12 @@ public class ClientEventHandlers implements ClientModInitializer {
                     Files.createDirectories(entryPath);
                 } else {
                     Files.createDirectories(entryPath.getParent());
-                    Path tempFile = null;
-                    try {
-                        // Write to a temp file first to avoid locking issues
-                        tempFile = Files.createTempFile(entryPath.getParent(), entryPath.getFileName().toString(), ".tmp");
-                        try (OutputStream out = Files.newOutputStream(tempFile, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
-                            byte[] buffer = new byte[8192];
-                            int len;
-                            while ((len = zipInputStream.read(buffer)) > 0) {
-                                out.write(buffer, 0, len);
-                            }
+                    try (OutputStream out = Files.newOutputStream(entryPath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                        byte[] buffer = new byte[8192];
+                        int len;
+                        while ((len = zipInputStream.read(buffer)) > 0) {
+                            out.write(buffer, 0, len);
                         }
-                        // Atomically move temp file to destination, with retry for Windows lock issues
-                        boolean moved = false;
-                        int attempts = 0;
-                        IOException lastException = null;
-                        while (!moved && attempts < 5) {
-                            try {
-                                Files.move(tempFile, entryPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-                                moved = true;
-                            } catch (IOException ex) {
-                                lastException = ex;
-                                attempts++;
-                                if (ex instanceof AccessDeniedException) {
-                                    LOGGER.error("Access denied when moving {}. This file may be locked by Minecraft. Skipping this mod file.", entryPath);
-                                    sendPlayerMessage("Failed to update mod file: " + entryPath.getFileName() + ". It may be locked by Minecraft. Skipping this file.");
-                                }
-                                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
-                            }
-                        }
-                        if (!moved) {
-                            throw new IOException("Failed to move temp file to destination after retries: " + entryPath, lastException);
-                        }
-                    } catch (Exception ex) {
-                        LOGGER.error("Failed to extract mod file {}: {}", entryPath, ex.getMessage());
-                        sendPlayerMessage("Failed to extract mod file: " + entryPath.getFileName() + ". Skipping.");
-                        if (tempFile != null) {
-                            try { Files.deleteIfExists(tempFile); } catch (IOException ignored) {}
-                        }
-                        // Continue to next entry
                     }
                 }
                 zipInputStream.closeEntry();
@@ -275,32 +232,27 @@ public class ClientEventHandlers implements ClientModInitializer {
         }
     }
 
-    // Cleanup leftover .tmp files in the mods directory
-    private static void cleanupTempFiles(Path directory) {
-        try {
-            Files.walk(directory)
-                .filter(p -> p.getFileName().toString().endsWith(".tmp"))
-                .forEach(p -> {
-                    try {
-                        Files.deleteIfExists(p);
-                        LOGGER.info("Deleted leftover temp file: {}", p);
-                    } catch (IOException e) {
-                        LOGGER.warn("Failed to delete temp file: {}", p);
-                    }
-                });
-        } catch (IOException e) {
-            LOGGER.warn("Failed to clean up temp files in {}", directory);
+    private static void updateChecksumsAndDeleteOutdated() throws Exception {
+        // Compute new checksums from extracted files
+        var newChecksums = Checksum.computeChecksums(UNZIP_DESTINATION);
+        // Remove files in mods folder not present in newChecksums
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(UNZIP_DESTINATION, "*.jar")) {
+            for (Path modFile : stream) {
+                String fileName = modFile.getFileName().toString();
+                if (!newChecksums.containsKey(fileName)) {
+                    Files.deleteIfExists(modFile);
+                    LOGGER.info("Deleted outdated mod: {}", fileName);
+                }
+            }
         }
-    }
-
-    private static void saveUpdatedChecksums() throws Exception {
-        LOGGER.info("Saving updated checksums...");
+        // Save new checksums
         Checksum.saveChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
     }
 
     private static void sendPlayerMessage(String message) {
-        if (MinecraftClient.getInstance().player != null) {
-            MinecraftClient.getInstance().player.sendMessage(Text.literal(message), false);
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player != null && client.player.getServer() != null) {
+            client.player.sendMessage(Text.literal(message), false);
         }
     }
 }
