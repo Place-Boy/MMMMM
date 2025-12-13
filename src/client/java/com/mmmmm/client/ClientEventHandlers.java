@@ -282,8 +282,20 @@ public class ClientEventHandlers implements ClientModInitializer {
             for (Path modFile : stream) {
                 String fileName = modFile.getFileName().toString();
                 if (!extractedModFiles.contains(fileName)) {
-                    Files.deleteIfExists(modFile);
-                    LOGGER.info("Deleted outdated mod: {}", fileName);
+                    try {
+                        if (Files.deleteIfExists(modFile)) {
+                            LOGGER.info("Deleted outdated mod: {}", fileName);
+                        }
+                    } catch (FileSystemException fse) {
+                        LOGGER.warn("Could not delete {} because it is locked ({}). Scheduling for deletion on exit.", fileName, fse.getMessage());
+                        try {
+                            forceDeleteOnExit(modFile.toFile());
+                        } catch (IOException ioe) {
+                            LOGGER.error("Failed to schedule {} for deletion on exit", fileName, ioe);
+                        }
+                    } catch (IOException ioe) {
+                        LOGGER.error("Unexpected error deleting outdated mod {}", fileName, ioe);
+                    }
                 }
             }
         }
