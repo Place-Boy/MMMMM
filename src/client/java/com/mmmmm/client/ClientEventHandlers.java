@@ -162,12 +162,12 @@ public class ClientEventHandlers implements ClientModInitializer {
     }
 
     private static void downloadFileWithProgress(HttpURLConnection connection, Path destination, DownloadProgressScreen progressScreen) throws IOException {
+        // Download to a temporary file first to avoid truncating the target (which could be read by the server)
+        Path temp = destination.resolveSibling(destination.getFileName().toString() + ".downloading");
+        // Ensure parent exists
         Files.createDirectories(destination.getParent());
-        if (!Files.exists(destination)) {
-            Files.createFile(destination);
-        }
         try (InputStream in = connection.getInputStream();
-             var out = Files.newOutputStream(destination)) {
+             var out = Files.newOutputStream(temp)) {
             long totalBytes = connection.getContentLengthLong();
             long downloadedBytes = 0;
             long startTime = System.currentTimeMillis();
@@ -178,13 +178,18 @@ public class ClientEventHandlers implements ClientModInitializer {
             while ((bytesRead = in.read(buffer)) != -1) {
                 if (progressScreen.isCancelled()) {
                     LOGGER.info("Download cancelled by user.");
+                    // Clean up partial download
+                    try { Files.deleteIfExists(temp); } catch (IOException ignored) {}
                     return;
                 }
 
                 out.write(buffer, 0, bytesRead);
                 downloadedBytes += bytesRead;
 
-                int progress = (int) ((downloadedBytes * 100) / totalBytes);
+                int progress = 0;
+                if (totalBytes > 0) {
+                    progress = (int) ((downloadedBytes * 100) / totalBytes);
+                }
                 long elapsedTime = System.currentTimeMillis() - startTime;
                 double speedInKB = elapsedTime > 0 ? (downloadedBytes / 1024.0) / (elapsedTime / 1000.0) : 0.0;
 
@@ -194,6 +199,27 @@ public class ClientEventHandlers implements ClientModInitializer {
 
                 progressScreen.updateProgress(progress, speed);
             }
+            // Finished writing temp file — atomically move to destination
+            LOGGER.info("Download finished: wrote {} bytes to temporary file {} (content-length={})", downloadedBytes, temp, totalBytes);
+            if (downloadedBytes == 0) {
+                // Clean up empty temp file and fail fast
+                try { Files.deleteIfExists(temp); } catch (IOException ignored) {}
+                throw new IOException("Downloaded file is empty (0 bytes)");
+            }
+        }
+        try {
+            Files.move(temp, destination, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            LOGGER.info("Moved downloaded file {} -> {}", temp, destination);
+        } catch (AtomicMoveNotSupportedException amnse) {
+            // Fallback to non-atomic move
+            LOGGER.warn("Atomic move not supported, falling back to non-atomic move for {} -> {}", temp, destination);
+            Files.move(temp, destination, StandardCopyOption.REPLACE_EXISTING);
+            LOGGER.info("Moved downloaded file {} -> {} (non-atomic)", temp, destination);
+        } catch (IOException ioe) {
+            LOGGER.error("Failed to move downloaded temp file {} to final destination {}", temp, destination, ioe);
+            // Attempt to clean up temp on failure
+            try { Files.deleteIfExists(temp); } catch (IOException ignored) {}
+            throw ioe;
         }
     }
 
