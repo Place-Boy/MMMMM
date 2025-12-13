@@ -1,12 +1,14 @@
 {
   "required": true,
   "package": "com.mmmmm.mixin",
-  "compatibilityLevel": "JAVA_21",
-  "mixins": [
-    "ScreenAccessorMixin"
-  ],
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "client-mmmmm-refmap.json",
   "client": [
     "EditServerScreenMixin",
-    "EditServerScreenAccessor"
+    "EditServerScreenAccessor",
+    "ScreenInvoker",
+    "MultiplayerScreenAccessor",
+    "ScreenMixin",
+    "ScreenResizeMixin"
   ]
 }
