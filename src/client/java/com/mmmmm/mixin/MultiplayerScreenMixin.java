@@ -10,6 +10,7 @@ import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.option.ServerList;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -22,9 +23,13 @@ import static com.mmmmm.MMMMM.LOGGER;
 @Mixin(MultiplayerScreen.class)
 public class MultiplayerScreenMixin {
 
-    @Inject(method = "init", at = @At("HEAD"))
+    @Unique
+    private final List<ButtonWidget> mmmmm$updateButtons = new ArrayList<>();
+
+    @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
         MultiplayerScreen screen = (MultiplayerScreen) (Object) this;
+        this.mmmmm$updateButtons.clear();
 
         ServerList serverList = new ServerList(MinecraftClient.getInstance());
         serverList.loadFile();
@@ -34,36 +39,25 @@ public class MultiplayerScreenMixin {
         int buttonSpacing = 35;
         int maxHeight = screen.height - 50;
 
-        List<ButtonWidget> buttonsToAdd = new ArrayList<>();
-
         for (int i = 0; i < serverList.size(); i++) {
             int yOffset = buttonY + (i * buttonSpacing);
             if (yOffset + 20 > maxHeight) break;
 
             ServerInfo server = serverList.get(i);
             ButtonWidget serverButton = createServerButton(buttonX, yOffset, server);
-            buttonsToAdd.add(serverButton);
+            this.mmmmm$updateButtons.add(serverButton);
+            ((ScreenInvoker) screen).invokeAddDrawableChild(serverButton);
         }
-
-        MinecraftClient.getInstance().execute(() -> {
-            for (ButtonWidget button : buttonsToAdd) {
-                ((ScreenInvoker) screen).invokeAddDrawableChild(button);
-            }
-        });
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
+    @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("TAIL"))
     private void onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        MultiplayerScreen screen = (MultiplayerScreen) (Object) this;
-
-        for (ButtonWidget button : screen.children().stream()
-                .filter(c -> c instanceof ButtonWidget)
-                .map(c -> (ButtonWidget) c)
-                .toList()) {
-            button.render(context, mouseX, mouseY, delta); // Render buttons on top
+        for (ButtonWidget button : this.mmmmm$updateButtons) {
+            button.render(context, mouseX, mouseY, delta);
         }
     }
 
+    @Unique
     private ButtonWidget createServerButton(int x, int y, ServerInfo server) {
         return ButtonWidget.builder(
                 Text.literal("Update"),

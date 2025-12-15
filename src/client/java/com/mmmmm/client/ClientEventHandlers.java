@@ -134,10 +134,8 @@ public class ClientEventHandlers implements ClientModInitializer {
                 prepareDestinationDirectory();
                 extractZipFile();
                 updateChecksumsAndDeleteOutdated();
-                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
             } catch (Exception e) {
                 LOGGER.error("Failed to download or extract mods from " + attemptedUrl, e);
-                sendPlayerMessage("Failed to download or extract mods for " + serverUpdateIP + ". Check logs for more details.");
             } finally {
                 minecraft.execute(() -> minecraft.setScreen(titleScreen));
             }
@@ -258,7 +256,6 @@ public class ClientEventHandlers implements ClientModInitializer {
                         }
                     } catch (java.nio.file.AccessDeniedException ade) {
                         LOGGER.warn("Access denied when writing {}. Scheduling for deletion on JVM exit.", entryPath);
-                        sendPlayerMessage("File locked: " + entryPath.getFileName() + ". Will be deleted on exit.");
                         try {
                             forceDeleteOnExit(entryPath.toFile());
                         } catch (IOException ioe) {
@@ -321,12 +318,5 @@ public class ClientEventHandlers implements ClientModInitializer {
             }
         }
         file.deleteOnExit();
-    }
-
-    private static void sendPlayerMessage(String message) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player != null && client.player.getServer() != null) {
-            client.player.sendMessage(Text.literal(message), false);
-        }
     }
 }

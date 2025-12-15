@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "mmmmm",
-  "version": "1.0.1-alpha",
+  "version": "1.0.5-beta",
   "name": "MMMMM",
   "description": "A mod that updates client packs from a minecraft server",
   "authors": [
@@ -24,6 +24,6 @@
   "depends": {
     "fabricloader": ">=0.17.0",
     "fabric": "*",
-    "minecraft": "1.21.8"
+    "minecraft": ">=1.21.11"
   }
 }
