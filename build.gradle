@@ -75,6 +75,14 @@ jar {
 	}
 }
 
+sourceSets {
+	main {
+		java {
+			srcDirs = ['src/main/java', 'src/client/java']
+		}
+	}
+}
+
 // configure the maven publication
 publishing {
 	publications {

@@ -50,7 +50,7 @@ public class MultiplayerScreenMixin {
         }
     }
 
-    @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("TAIL"))
+    @Inject(method = "render", at = @At("TAIL"))
     private void onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         for (ButtonWidget button : this.mmmmm$updateButtons) {
             button.render(context, mouseX, mouseY, delta);
