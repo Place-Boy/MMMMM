@@ -6,7 +6,6 @@ import java.net.http.HttpResponse;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.CommandSourceStack;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
@@ -40,7 +39,7 @@ public class RegisterCommands {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(literal("mmmmm")
                     .then(literal("save-mods")
-                            .requires(source -> source.hasPermissionLevel(2))
+                            .requires(source -> source.getPermissionLevel() >= 2)
                             .executes(RegisterCommands::saveModsToZip)
                     )
             );
@@ -121,7 +120,7 @@ public class RegisterCommands {
                 LOGGER.error("Failed to create mods.zip", e);
             }
         });
-        context.getSource().sendFeedback(() -> Component.literal("Started mods.zip creation."), false);
+        context.getSource().sendSuccess(() -> Component.literal("Started mods.zip creation."), false);
         return 1;
     }
 
