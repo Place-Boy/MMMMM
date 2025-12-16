@@ -1,15 +1,13 @@
 package com.mmmmm.mixin;
 
 import com.mmmmm.client.ServerMetadata;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.screen.multiplayer.AddServerScreen;
-import net.minecraft.client.gui.widget.CyclingButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.component.Component;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.screens.ManageServerScreen;
+import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -17,21 +15,23 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(AddServerScreen.class)
+@Mixin(ManageServerScreen.class)
 public abstract class EditServerScreenMixin {
 
     private int[] labelYPositions = new int[2]; // 0 = Server Name Y, 1 = Server Address Y
-    private TextFieldWidget customField;
+    private EditBox customField;
 
+    // TODO(Ravel): no target class
+// TODO(Ravel): no target class
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        AddServerScreen screen = (AddServerScreen) (Object) this;
+        Minecraft mc = Minecraft.getInstance();
+        ManageServerScreen screen = (ManageServerScreen) (Object) this;
 
         int[] index = {0};
         screen.children().stream()
-                .filter(c -> c instanceof TextFieldWidget)
-                .map(c -> (TextFieldWidget) c)
+                .filter(c -> c instanceof EditBox)
+                .map(c -> (EditBox) c)
                 .forEach(editBox -> {
                     editBox.setY(editBox.getY() - 30);
                     if (index[0] < 2) {
@@ -41,25 +41,25 @@ public abstract class EditServerScreenMixin {
 
         // Move the resource pack prompt down
         screen.children().stream()
-                .filter(c -> c instanceof CyclingButtonWidget)
-                .map(c -> (CyclingButtonWidget<?>) c)
+                .filter(c -> c instanceof CycleButton)
+                .map(c -> (CycleButton<?>) c)
                 .filter(button -> button.getMessage().getString().contains("Resource"))
                 .forEach(button -> button.setY(button.getY() + 18)); // Adjust value as needed
 
-        customField = new TextFieldWidget(
-                mc.textRenderer,
-                mc.getWindow().getScaledWidth() / 2 - 100,
-                mc.getWindow().getScaledHeight() / 4 + 60,
+        customField = new EditBox(
+                mc.font,
+                mc.getWindow().getGuiScaledWidth() / 2 - 100,
+                mc.getWindow().getGuiScaledHeight() / 4 + 60,
                 200, 20,
-                Text.literal("Custom Field")
+                net.minecraft.network.chat.Component.literal("Custom Field")
         );
         customField.setMaxLength(100);
 
         EditServerScreenAccessor accessor = (EditServerScreenAccessor) screen;
-        String serverIP = accessor.getServerData().address;
+        String serverIP = accessor.getServerData().ip;
         String existingMetadata = ServerMetadata.getMetadata(serverIP);
         if (!existingMetadata.isBlank()) {
-            customField.setText(existingMetadata);
+            customField.setValue(existingMetadata);
         }
 
         ((com.mmmmm.mixin.ScreenInvoker) this).invokeAddDrawableChild(customField);
@@ -69,31 +69,33 @@ public abstract class EditServerScreenMixin {
     private void onSaveCustomField(CallbackInfo ci) {
         if (customField != null) {
             String customValue = customField.getText();
-            AddServerScreen screen = (AddServerScreen) (Object) this;
-            String serverIP = ((EditServerScreenAccessor) screen).getServerData().address;
+            ManageServerScreen screen = (ManageServerScreen) (Object) this;
+            String serverIP = ((EditServerScreenAccessor) screen).getServerData().ip;
             ServerMetadata.setMetadata(serverIP, customValue);
         }
     }
 
-    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/DrawContext;drawTextWithShadow(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/text/Text;III)V"))
-    private void redirectDrawLabel(DrawContext context, TextRenderer textRenderer, Text text, int x, int y, int color) {
+    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawTextWithShadow(Lnet/minecraft/client/font/Font;Lnet/minecraft/text/Text;III)V"))
+    private void redirectDrawLabel(GuiGraphics context, Font Font, net.minecraft.network.chat.Component text, int x, int y, int color) {
         // Skip original calls for the first two labels
         if (text.getString().contains("Server Name") || text.getString().contains("Server Address")) {
             return;
         }
         // Draw other labels normally
-        context.drawTextWithShadow(textRenderer, text, x, y, color);
+        context.drawTextWithShadow(Font, text, x, y, color);
     }
 
+    // TODO(Ravel): no target class
+// TODO(Ravel): no target class
     @Inject(method = "render", at = @At("HEAD"))
-    private void onRenderStart(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        int x = MinecraftClient.getInstance().getWindow().getScaledWidth() / 2 - 100;
+    private void onRenderStart(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        int x = Minecraft.getInstance().getWindow().getScaledWidth() / 2 - 100;
         if (labelYPositions[0] != 0) {
-            context.drawText(MinecraftClient.getInstance().textRenderer, Text.literal("Server Name"), x, labelYPositions[0], 0xFFFFFFFF, true);
+            context.drawText(Minecraft.getInstance().font, net.minecraft.network.chat.Component.literal("Server Name"), x, labelYPositions[0], 0xFFFFFFFF, true);
         }
         if (labelYPositions[1] != 0) {
-            context.drawText(MinecraftClient.getInstance().textRenderer, Text.literal("Server Address"), x, labelYPositions[1], 0xFFFFFFFF, true);
+            context.drawText(Minecraft.getInstance().font, net.minecraft.network.chat.Component.literal("Server Address"), x, labelYPositions[1], 0xFFFFFFFF, true);
         }
-        context.drawText(MinecraftClient.getInstance().textRenderer, Text.literal("Download URL"), x, MinecraftClient.getInstance().getWindow().getScaledHeight() / 4 + 50, 0xFFFFFFFF, true);
+        context.drawText(Minecraft.getInstance().font, net.minecraft.network.chat.Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getScaledHeight() / 4 + 50, 0xFFFFFFFF, true);
     }
 }

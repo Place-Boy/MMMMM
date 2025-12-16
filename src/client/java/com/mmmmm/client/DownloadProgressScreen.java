@@ -1,22 +1,22 @@
 package com.mmmmm.client;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
 
 public class DownloadProgressScreen extends Screen {
 
     private final String serverUpdateIP;
     private int progress = 0;
     private String downloadSpeed = "0 KB/s";
-    private ButtonWidget cancelButton;
+    private Button cancelButton;
     private volatile boolean isCancelled = false;
 
     public DownloadProgressScreen(String serverIP) {
-        super(Text.literal("Downloading Mods"));
+        super(Component.literal("Downloading Mods"));
         this.serverUpdateIP = serverIP;
     }
 
@@ -29,16 +29,16 @@ public class DownloadProgressScreen extends Screen {
         int buttonX = (this.width - buttonWidth) / 2;
         int buttonY = (this.height / 2) + 50;
 
-        cancelButton = ButtonWidget.builder(
-                Text.literal("Cancel"),
+        cancelButton = Button.builder(
+                Component.literal("Cancel"),
                 (button) -> {
                     isCancelled = true;
-                    MinecraftClient.getInstance().execute(() ->
-                            MinecraftClient.getInstance().setScreen(new TitleScreen()));
+                    Minecraft.getInstance().execute(() ->
+                            Minecraft.getInstance().setScreen(new TitleScreen()));
                 }
-        ).dimensions(buttonX, buttonY, buttonWidth, buttonHeight).build();
+        ).pos(buttonX, buttonY).size(buttonWidth, buttonHeight).build();
 
-        this.addDrawableChild(cancelButton);
+        this.addRenderableWidget(cancelButton);
     }
 
     public boolean isCancelled() {
@@ -46,11 +46,11 @@ public class DownloadProgressScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
 
         // Draw the title
-        context.drawCenteredTextWithShadow(this.textRenderer,
+        context.drawCenteredString(this.font,
                 "Downloading mods from " + serverUpdateIP,
                 this.width / 2, 20, 0xFFFFFFFF);
 
@@ -60,7 +60,7 @@ public class DownloadProgressScreen extends Screen {
         int barY = this.height / 2;
 
         // Draw download speed
-        context.drawCenteredTextWithShadow(this.textRenderer, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFFFF);
+        context.drawCenteredString(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFFFF);
 
         // Draw progress bar background
         context.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFFAAAAAA);
@@ -70,7 +70,7 @@ public class DownloadProgressScreen extends Screen {
         context.fill(barX, barY, barX + progressWidth, barY + barHeight, 0xFF00FF00);
 
         // Draw progress percentage
-        context.drawCenteredTextWithShadow(this.textRenderer, progress + "%", this.width / 2, barY + 5, 0xFFFFFFFF);
+        context.drawCenteredString(this.font, progress + "%", this.width / 2, barY + 5, 0xFFFFFFFF);
     }
 
     public void updateProgress(int progress, String downloadSpeed) {

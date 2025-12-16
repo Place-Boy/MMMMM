@@ -10,10 +10,7 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.client.option.ServerList;
-import net.minecraft.text.Text;
-import net.minecraft.
+import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,13 +59,13 @@ public class ClientEventHandlers implements ClientModInitializer {
 
     private static Button createServerButton(int x, int y, ServerData server) {
         return Button.builder(
-                Text.literal("Update"),
+                Component.literal("Update"),
                 (btn) -> {
-                    String serverUpdateIP = ServerMetadata.getMetadata(server.address);
+                    String serverUpdateIP = ServerMetadata.getMetadata(server.ip);
                     LOGGER.info("Update button clicked for server: {}", serverUpdateIP);
                     downloadAndProcessMod(serverUpdateIP);
                 }
-        ).dimensions(x, y, 50, 20).build();
+        ).pos(x, y).size(50, 20).build();
     }
 
     public static void downloadAndProcessMod(String serverUpdateIP) {

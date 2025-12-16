@@ -19,9 +19,13 @@ import java.util.List;
 
 import static com.mmmmm.MMMMM.LOGGER;
 
+// TODO(Ravel): can not resolve target class MultiplayerScreen
+// TODO(Ravel): can not resolve target class MultiplayerScreen
 @Mixin(MultiplayerScreen.class)
 public class MultiplayerScreenMixin {
 
+    // TODO(Ravel): no target class
+// TODO(Ravel): no target class
     @Inject(method = "init", at = @At("HEAD"))
     private void onInit(CallbackInfo ci) {
         MultiplayerScreen screen = (MultiplayerScreen) (Object) this;
@@ -52,6 +56,8 @@ public class MultiplayerScreenMixin {
         });
     }
 
+    // TODO(Ravel): no target class
+// TODO(Ravel): no target class
     @Inject(method = "render", at = @At("TAIL"))
     private void onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         MultiplayerScreen screen = (MultiplayerScreen) (Object) this;
