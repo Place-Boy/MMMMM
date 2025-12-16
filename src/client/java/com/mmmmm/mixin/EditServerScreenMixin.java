@@ -9,7 +9,6 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -56,7 +55,7 @@ public abstract class EditServerScreenMixin {
         customField.setMaxLength(100);
 
         EditServerScreenAccessor accessor = (EditServerScreenAccessor) screen;
-        String serverIP = accessor.getServerData().ip;
+        String serverIP = accessor.getServer().ip;
         String existingMetadata = ServerMetadata.getMetadata(serverIP);
         if (!existingMetadata.isBlank()) {
             customField.setValue(existingMetadata);
@@ -65,37 +64,36 @@ public abstract class EditServerScreenMixin {
         ((com.mmmmm.mixin.ScreenInvoker) this).invokeAddDrawableChild(customField);
     }
 
-    @Inject(method = "addAndClose", at = @At("TAIL"))
+    @Inject(method = "onAdd", at = @At("TAIL"))
     private void onSaveCustomField(CallbackInfo ci) {
         if (customField != null) {
-            String customValue = customField.getText();
+            String customValue = customField.getValue();
             ManageServerScreen screen = (ManageServerScreen) (Object) this;
-            String serverIP = ((EditServerScreenAccessor) screen).getServerData().ip;
+            String serverIP = ((EditServerScreenAccessor) screen).getServer().ip;
             ServerMetadata.setMetadata(serverIP, customValue);
         }
     }
 
-    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawTextWithShadow(Lnet/minecraft/client/font/Font;Lnet/minecraft/text/Text;III)V"))
-    private void redirectDrawLabel(GuiGraphics context, Font Font, net.minecraft.network.chat.Component text, int x, int y, int color) {
-        // Skip original calls for the first two labels
-        if (text.getString().contains("Server Name") || text.getString().contains("Server Address")) {
-            return;
-        }
-        // Draw other labels normally
-        context.drawTextWithShadow(Font, text, x, y, color);
-    }
-
-    // TODO(Ravel): no target class
-// TODO(Ravel): no target class
     @Inject(method = "render", at = @At("HEAD"))
     private void onRenderStart(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        int x = Minecraft.getInstance().getWindow().getScaledWidth() / 2 - 100;
+        ManageServerScreen screen = (ManageServerScreen) (Object) this;
+        Font font = net.minecraft.client.Minecraft.getInstance().font;
+
         if (labelYPositions[0] != 0) {
-            context.drawText(Minecraft.getInstance().font, net.minecraft.network.chat.Component.literal("Server Name"), x, labelYPositions[0], 0xFFFFFFFF, true);
+            String label = "Server Name";
+            int x = (screen.width - font.width(Component.literal(label))) / 2;
+            context.drawString(font, Component.literal(label), x, labelYPositions[0], 0xFFFFFFFF, true);
         }
         if (labelYPositions[1] != 0) {
-            context.drawText(Minecraft.getInstance().font, net.minecraft.network.chat.Component.literal("Server Address"), x, labelYPositions[1], 0xFFFFFFFF, true);
+            String label = "Server Address";
+            int x = (screen.width - font.width(Component.literal(label))) / 2;
+            context.drawString(font, Component.literal(label), x, labelYPositions[1], 0xFFFFFFFF, true);
         }
-        context.drawText(Minecraft.getInstance().font, net.minecraft.network.chat.Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getScaledHeight() / 4 + 50, 0xFFFFFFFF, true);
+
+        // Download URL label
+        String downloadLabel = "Download URL";
+        int x = (screen.width - font.width(Component.literal(downloadLabel))) / 2;
+        context.drawString(font, Component.literal(downloadLabel), x, screen.height / 4 + 50, 0xFFFFFFFF, true);
     }
+
 }

@@ -6,11 +6,11 @@ import java.net.http.HttpResponse;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
+import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
 import java.net.URI;
@@ -27,7 +27,6 @@ import java.util.zip.ZipOutputStream;
 
 import static com.mmmmm.MMMMM.LOGGER;
 import static net.minecraft.commands.Commands.literal;
-import static net.minecraft.server.command.CommandManager.literal;
 
 public class RegisterCommands {
     private static java.nio.file.attribute.FileTime lastBuildTime = java.nio.file.attribute.FileTime.fromMillis(0);
@@ -122,7 +121,7 @@ public class RegisterCommands {
                 LOGGER.error("Failed to create mods.zip", e);
             }
         });
-        context.getSource().sendFeedback(() -> Text.literal("Started mods.zip creation."), false);
+        context.getSource().sendFeedback(() -> Component.literal("Started mods.zip creation."), false);
         return 1;
     }
 

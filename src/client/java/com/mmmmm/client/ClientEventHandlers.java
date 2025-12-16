@@ -1,8 +1,6 @@
 package com.mmmmm.client;
 
 import com.mmmmm.Checksum;
-import com.mmmmm.mixin.MultiplayerScreenAccessor;
-import com.mmmmm.mixin.ScreenInvoker;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.Minecraft;
@@ -21,9 +19,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
