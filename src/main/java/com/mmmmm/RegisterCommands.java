@@ -5,6 +5,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import com.google.gson.JsonObject;
@@ -25,6 +26,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static com.mmmmm.MMMMM.LOGGER;
+import static net.minecraft.commands.Commands.literal;
 import static net.minecraft.server.command.CommandManager.literal;
 
 public class RegisterCommands {
@@ -46,7 +48,7 @@ public class RegisterCommands {
         });
     }
 
-    public static int saveModsToZip(CommandContext<ServerCommandSource> context) {
+    public static int saveModsToZip(CommandContext<CommandSourceStack> context) {
         executor.execute(() -> {
             Path modsFolder = Path.of("mods");
             Path modsZip = Path.of("MMMMM/shared-files/mods.zip");

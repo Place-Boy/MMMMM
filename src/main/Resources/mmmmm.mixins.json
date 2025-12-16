@@ -2,12 +2,10 @@
   "required": true,
   "package": "com.mmmmm.mixin",
   "compatibilityLevel": "JAVA_21",
-  "refmap": "client-mmmmm.refmap.json",
-  "client": [
-    "EditServerScreenMixin",
-    "EditServerScreenAccessor",
-    "ScreenInvoker",
-    "MultiplayerScreenAccessor",
-    "MultiplayerScreenMixin"
-  ]
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
 }
