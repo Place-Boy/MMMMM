@@ -4,6 +4,7 @@
   "version": "1.0.6-beta",
   "name": "MMMMM",
   "description": "A mod that updates client packs from a minecraft server",
+  "refmap": "mmmmm.refmap.json",
   "authors": [
     "Place_Bo"
   ],
