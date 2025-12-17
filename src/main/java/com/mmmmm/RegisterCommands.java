@@ -4,12 +4,17 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import com.mojang.brigadier.context.CommandContext;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.commands.CommandSourceStack;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import net.minecraft.network.chat.Component;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.server.permissions.Permission;
+import net.minecraft.server.permissions.PermissionLevel;
+import me.lucko.fabric.api.permissions.v0.Permissions;
+
+import static net.minecraft.commands.Commands.literal;
 
 import java.io.IOException;
 import java.net.URI;
@@ -25,26 +30,26 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static com.mmmmm.MMMMM.LOGGER;
-import static net.minecraft.commands.Commands.literal;
 
 public class RegisterCommands {
-    private static java.nio.file.attribute.FileTime lastBuildTime = java.nio.file.attribute.FileTime.fromMillis(0);
+    private static FileTime lastBuildTime = FileTime.fromMillis(0);
     private static final java.util.concurrent.ExecutorService executor =
             java.util.concurrent.Executors.newSingleThreadExecutor();
     private static final java.util.Map<String, Boolean> modrinthCache = new java.util.HashMap<>();
     private static final HttpClient httpClient = HttpClient.newHttpClient();
 
-
     public static void register() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(literal("mmmmm")
-                    .then(literal("save-mods")
-                            .requires(source -> source.getPermissionLevel() >= 2)
-                            .executes(RegisterCommands::saveModsToZip)
-                    )
+            dispatcher.register(
+                    literal("mmmmm")
+                            .then(literal("save-mods")
+                                    .requires(Permissions.require("mmmmm.save_mods", 2))
+                                    .executes(RegisterCommands::saveModsToZip)
+                            )
             );
         });
     }
+
 
     public static int saveModsToZip(CommandContext<CommandSourceStack> context) {
         executor.execute(() -> {
@@ -124,9 +129,6 @@ public class RegisterCommands {
         return 1;
     }
 
-    /**
-     * Reads fabric.mod.json from the JAR and returns the mod id.
-     */
     private static String getModIdFromJar(Path jarPath) {
         try (FileSystem fs = FileSystems.newFileSystem(jarPath, (ClassLoader) null)) {
             Path modJson = fs.getPath("fabric.mod.json");
@@ -143,9 +145,6 @@ public class RegisterCommands {
         return null;
     }
 
-    /**
-     * Reads fabric.mod.json from the JAR and returns the mod name.
-     */
     private static String getModNameFromJar(Path jarPath) {
         try (FileSystem fs = FileSystems.newFileSystem(jarPath, (ClassLoader) null)) {
             Path modJson = fs.getPath("fabric.mod.json");
@@ -163,9 +162,6 @@ public class RegisterCommands {
         return null;
     }
 
-    /**
-     * Checks if the mod is server-side only by querying Modrinth API.
-     */
     private static boolean isServerOnlyMod(String modId, String modName) {
         if (modrinthCache.containsKey(modId)) {
             return modrinthCache.get(modId);
@@ -173,9 +169,7 @@ public class RegisterCommands {
 
         boolean result = false;
         try {
-            // Try searching by mod id
             result = checkModrinthServerOnly(modId, modId, modName);
-            // If not found, try searching by mod name
             if (!result && modName != null && !modName.isBlank()) {
                 result = checkModrinthServerOnly(modName, modId, modName);
             }

@@ -31,7 +31,7 @@ public class MultiplayerScreenMixin {
         JoinMultiplayerScreen screen = (JoinMultiplayerScreen) (Object) this;
 
         ServerList serverList = new ServerList(Minecraft.getInstance());
-        serverList.loadFile();
+        serverList.load();
 
         int buttonX = screen.width - 55;
         int buttonY = 40;
@@ -54,20 +54,6 @@ public class MultiplayerScreenMixin {
                 ((ScreenInvoker) screen).invokeAddDrawableChild(button);
             }
         });
-    }
-
-    // TODO(Ravel): no target class
-// TODO(Ravel): no target class
-    @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        JoinMultiplayerScreen screen = (JoinMultiplayerScreen) (Object) this;
-
-        for (Button button : screen.children().stream()
-                .filter(c -> c instanceof Button)
-                .map(c -> (Button) c)
-                .toList()) {
-            button.render(context, mouseX, mouseY, delta); // Render buttons on top
-        }
     }
 
     private Button createServerButton(int x, int y, ServerData server) {

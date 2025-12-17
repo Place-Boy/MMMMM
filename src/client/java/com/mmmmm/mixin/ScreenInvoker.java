@@ -13,6 +13,6 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface ScreenInvoker {
     // TODO(Ravel): Could not determine a single target
 // TODO(Ravel): Could not determine a single target
-    @Invoker("addDrawableChild")
+    @Invoker("addRenderableWidget")
     <T extends GuiEventListener & Renderable & NarratableEntry> T invokeAddDrawableChild(T drawable);
 }

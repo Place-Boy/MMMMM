@@ -15,7 +15,8 @@ public class MMMMM implements ModInitializer {
         LOGGER.info("Initializing MMMMM...");
         Config.registerConfig();
         RegisterCommands.register();
-        ServerEventHandlers.register(); // <-- Add this line
+        // Commands are registered via CommandsMixin during dispatcher construction.
+        ServerEventHandlers.register();
         LOGGER.info("MMMMM initialized.");
     }
 }

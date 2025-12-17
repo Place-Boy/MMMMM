@@ -8,7 +8,8 @@
     "EditServerScreenAccessor",
     "ScreenInvoker",
     "MultiplayerScreenAccessor",
-    "MultiplayerScreenMixin"
+    "MultiplayerScreenMixin",
+    "ScreenRenderMixin"
   ],
   "injectors": {
     "defaultRequire": 1

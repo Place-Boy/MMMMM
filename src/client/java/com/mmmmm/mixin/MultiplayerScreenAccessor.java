@@ -9,6 +9,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 // TODO(Ravel): can not resolve target class MultiplayerScreen
 @Mixin(JoinMultiplayerScreen.class)
 public interface MultiplayerScreenAccessor {
-    @Accessor("serverList")
+    @Accessor("servers")
     ServerList getServerList();
 }
