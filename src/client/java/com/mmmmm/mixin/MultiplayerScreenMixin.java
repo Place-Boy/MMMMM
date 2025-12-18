@@ -6,10 +6,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.multiplayer.ServerSelectionList;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -24,11 +28,17 @@ import static com.mmmmm.MMMMM.LOGGER;
 @Mixin(JoinMultiplayerScreen.class)
 public class MultiplayerScreenMixin {
 
+    @Shadow
+    protected ServerSelectionList serverSelectionList;
+
     // TODO(Ravel): no target class
 // TODO(Ravel): no target class
-    @Inject(method = "init", at = @At("HEAD"))
+    @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
         JoinMultiplayerScreen screen = (JoinMultiplayerScreen) (Object) this;
+
+        this.serverSelectionList.setWidth(screen.width - 120);
+        this.serverSelectionList.setX((screen.width - (screen.width - 120))/2);
 
         ServerList serverList = new ServerList(Minecraft.getInstance());
         serverList.load();
@@ -55,6 +65,15 @@ public class MultiplayerScreenMixin {
             }
         });
     }
+
+    @Inject(method = "repositionElements", at = @At("TAIL"))
+    private void onRefreshServerList(CallbackInfo ci) {
+        JoinMultiplayerScreen screen = (JoinMultiplayerScreen) (Object) this;
+
+        this.serverSelectionList.setWidth(screen.width - 120);
+        this.serverSelectionList.setX((screen.width - (screen.width - 120))/2);
+    }
+
 
     private Button createServerButton(int x, int y, ServerData server) {
         return Button.builder(
