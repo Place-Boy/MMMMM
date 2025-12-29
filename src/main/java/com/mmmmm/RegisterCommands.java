@@ -38,6 +38,39 @@ public class RegisterCommands {
                         })
                 )
         );
+
+        dispatcher.register(Commands.literal("mmmmm"))
+                .then(Commands.literal("save-all")
+                        .executes(context -> {
+                            saveAllToZip();
+                            context.getSource().sendSuccess(() -> Component.literal("Mods, config and kubejs have been saved to mmmmm.zop in the shared-files directory"), true);
+                            return 1;
+                        })
+                )
+        );
+    }
+
+    public static void saveAllToZip(){
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Path modsFolder = Path.of("mods");
+            Path configFolder = Path.of("config");
+            Path kubejsFolder = Path.of("kubejs");
+            Path allZip = Path.of("MMMMM/shared-files/mmmmm.zip");
+
+            try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(allZip))) {
+                // Helper method to add folder contents to zip
+                addFolderToZip(modsFolder, modsFolder, zipOut);
+                addFolderToZip(configFolder, configFolder, zipOut);
+                addFolderToZip(kubejsFolder, kubejsFolder, zipOut);
+
+                LOGGER.info("Successfully created mmmmm.zip in shared-files.");
+            } catch (IOException e) {
+                LOGGER.error("Failed to create mmmmm.zip", e);
+            }
+            finally {
+                Executors.newSingleThreadExecutor().shutdown();
+            }
+        });
     }
 
     public static void saveModsToZip() {
