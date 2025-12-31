@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -44,7 +45,7 @@ public class RegisterCommands {
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> {
                             saveAllToZip();
-                            context.getSource().sendSuccess(() -> Component.literal("Mods, config and kubejs have been saved to mmmmm.zop in the shared-files directory"), true);
+                            context.getSource().sendSuccess(() -> Component.literal("Mods, config and kubejs have been saved to separate zip files in the shared-files directory"), true);
                             return 1;
                         })
                 )
@@ -52,57 +53,57 @@ public class RegisterCommands {
     }
 
     public static void saveAllToZip(){
-        Executors.newSingleThreadExecutor().execute(() -> {
-            Path modsFolder = Path.of("mods");
-            Path configFolder = Path.of("config");
-            Path kubejsFolder = Path.of("kubejs");
-            Path allZip = Path.of("MMMMM/shared-files/mmmmm.zip");
-
-            try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(allZip))) {
-                // Helper method to add folder contents to zip
-                addFolderToZip(modsFolder, modsFolder, zipOut);
-                addFolderToZip(configFolder, configFolder, zipOut);
-                addFolderToZip(kubejsFolder, kubejsFolder, zipOut);
-
-                LOGGER.info("Successfully created mmmmm.zip in shared-files.");
-            } catch (IOException e) {
-                LOGGER.error("Failed to create mmmmm.zip", e);
-            }
-            finally {
-                Executors.newSingleThreadExecutor().shutdown();
-            }
+        ExecutorService exec = Executors.newSingleThreadExecutor();
+        exec.execute(() -> {
+            saveFolderToZip(Path.of("mods"), Path.of("MMMMM", "shared-files", "mods.zip"));
+            saveFolderToZip(Path.of("config"), Path.of("MMMMM", "shared-files", "config.zip"));
+            saveFolderToZip(Path.of("kubejs"), Path.of("MMMMM", "shared-files", "kubejs.zip"));
         });
+        exec.shutdown();
+    }
+
+    private static void saveFolderToZip(Path sourceFolder, Path targetZip) {
+        try {
+            Path parent = targetZip.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+
+            try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(targetZip))) {
+                addFolderToZip(sourceFolder, sourceFolder, zipOut);
+                LOGGER.info("Successfully created " + targetZip.getFileName() + " in shared-files.");
+            }
+        } catch (IOException e) {
+            LOGGER.error("Failed to create " + targetZip.getFileName(), e);
+        }
     }
 
     public static void addFolderToZip(Path rootFolder, Path sourceFolder, ZipOutputStream zipOut) throws IOException {
-        Files.walk(sourceFolder).forEach(path -> {
-            try {
-                if (Files.isRegularFile(path)) {
-                    Path relativePath = rootFolder.relativize(path);
-                    ZipEntry zipEntry = new ZipEntry(relativePath.toString());
-                    zipOut.putNextEntry(zipEntry);
-                    Files.copy(path, zipOut);
-                    zipOut.closeEntry();
-                }
-            } catch (IOException e) {
-                LOGGER.error("Failed to add file to zip: " + path, e);
-            }
-        });
+        if (!Files.exists(sourceFolder)) {
+            LOGGER.info("Source folder does not exist, skipping: " + sourceFolder);
+            return;
+        }
+
+        Files.walk(sourceFolder)
+                .filter(Files::isRegularFile)
+                .forEach(path -> {
+                    try {
+                        Path relativePath = rootFolder.relativize(path);
+                        // Ensure zip entries use '/' as separator
+                        String zipEntryName = relativePath.toString().replace('\\', '/');
+                        ZipEntry zipEntry = new ZipEntry(zipEntryName);
+                        zipOut.putNextEntry(zipEntry);
+                        Files.copy(path, zipOut);
+                        zipOut.closeEntry();
+                    } catch (IOException e) {
+                        LOGGER.error("Failed to add file to zip: " + path, e);
+                    }
+                });
     }
 
     public static void saveModsToZip() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            Path modsFolder = Path.of("mods");
-            Path modsZip = Path.of("MMMMM/shared-files/mods.zip");
-
-            try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(modsZip))) {
-                addFolderToZip(modsFolder, modsFolder, zipOut);
-                LOGGER.info("Successfully created mods.zip in shared-files.");
-            } catch (IOException e) {
-                LOGGER.error("Failed to create mods.zip", e);
-            } finally {
-                Executors.newSingleThreadExecutor().shutdown();
-            }
-        });
+        ExecutorService exec = Executors.newSingleThreadExecutor();
+        exec.execute(() -> saveFolderToZip(Path.of("mods"), Path.of("MMMMM", "shared-files", "mods.zip")));
+        exec.shutdown();
     }
 }
