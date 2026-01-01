@@ -1,4 +1,4 @@
-C:\Users\tomgt\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.0_mapped_official_1.20.1\forge-1.20.1-47.4.0_mapped_official_1.20.1-recomp.jar
+C:\Users\tomgt\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.0_mapped_official_1.20.1\forge-1.20.1-47.4.0_mapped_official_1.20.1.jar
 C:\Users\tomgt\.gradle\caches\forge_gradle\minecraft_repo\versions\1.20.1\client-extra.jar
 C:\Users\tomgt\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlearlydisplay\1.20.1-47.4.0\5a0c2d1a65a422bd0e64548e58b70f4d011ef788\fmlearlydisplay-1.20.1-47.4.0.jar
 C:\Users\tomgt\.gradle\caches\modules-2\files-2.1\net.minecraftforge\javafmllanguage\1.20.1-47.4.0\f0c0b352173d0a378cbdcec9cfc4ba65899a721\javafmllanguage-1.20.1-47.4.0.jar

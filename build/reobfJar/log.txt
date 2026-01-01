@@ -151,6 +151,7 @@ Writing Output: C:\Users\tomgt\Desktop\MMMMM\build\reobfJar\output.jar
   com/mmmmm/MMMMM.class
   com/mmmmm/RegisterCommands.class
   com/mmmmm/client/
+  com/mmmmm/client/ClientEventHandlers$PackageTask.class
   com/mmmmm/client/ClientEventHandlers.class
   com/mmmmm/client/ClientInit.class
   com/mmmmm/client/DownloadProgressScreen.class
