@@ -5,6 +5,10 @@ Specification-Version: 1
 Implementation-Title: MMMMM
 Implementation-Version: 1.0.0
 Implementation-Vendor: YourNameHere, OtherNameHere
+<<<<<<< HEAD
 Implementation-Timestamp: 2026-01-08T22:00:44+0000
+=======
+Implementation-Timestamp: 2025-12-31T13:34:17+0000
+>>>>>>> parent of 203b5e44 (Client side should work but needs testing)
 MixinConfigs: mmmmm.mixin.json
 

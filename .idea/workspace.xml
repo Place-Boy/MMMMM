@@ -5,6 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6a395ec4-f333-4611-94f8-2eef22854ff1" name="Changes" comment="">
+<<<<<<< HEAD
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/checksums/checksums.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" afterDir="false" />
@@ -21,6 +22,10 @@
       <change beforePath="$PROJECT_DIR$/build/tmp/compileJava/previous-compilation-data.bin" beforeDir="false" afterPath="$PROJECT_DIR$/build/tmp/compileJava/previous-compilation-data.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/tmp/shadowJar/MANIFEST.MF" beforeDir="false" afterPath="$PROJECT_DIR$/build/tmp/shadowJar/MANIFEST.MF" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/mmmmm/RegisterCommands.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mmmmm/RegisterCommands.java" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/.idea/modules/MMMMM.main.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules/MMMMM.main.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/libs/examplemod-1.0.0.jar" beforeDir="false" />
+>>>>>>> parent of 203b5e44 (Client side should work but needs testing)
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -148,8 +153,11 @@
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
     &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;1.20.1-Forge&quot;,
+<<<<<<< HEAD
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+=======
+>>>>>>> parent of 203b5e44 (Client side should work but needs testing)
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;E:/Making games/MMMMM&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
@@ -188,7 +196,11 @@
       <command value="gradle :runClient" />
     </option>
   </component>
+<<<<<<< HEAD
   <component name="RunManager" selected="Gradle.MMMMM [shadowJar]">
+=======
+  <component name="RunManager" selected="Gradle.MMMMM [build]">
+>>>>>>> parent of 203b5e44 (Client side should work but needs testing)
     <configuration type="GradleRunConfiguration" factoryName="Gradle" activateToolWindowBeforeRun="false">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -387,11 +399,19 @@
     </configuration>
     <recent_temporary>
       <list>
+<<<<<<< HEAD
         <item itemvalue="Gradle.MMMMM [shadowJar]" />
         <item itemvalue="Gradle.MMMMM [verifyRefmap]" />
         <item itemvalue="Gradle.MMMMM [runServer]" />
         <item itemvalue="Gradle.MMMMM [runClient]" />
         <item itemvalue="Gradle.MMMMM [build]" />
+=======
+        <item itemvalue="Gradle.MMMMM [build]" />
+        <item itemvalue="Gradle.MMMMM [runServer]" />
+        <item itemvalue="Gradle.MMMMM [runGameTestServer]" />
+        <item itemvalue="Gradle.MMMMM [runClient]" />
+        <item itemvalue="Gradle.MMMMM [genIntellijRuns]" />
+>>>>>>> parent of 203b5e44 (Client side should work but needs testing)
       </list>
     </recent_temporary>
   </component>
@@ -433,9 +453,12 @@
       <workItem from="1767187273098" duration="136000" />
       <workItem from="1767187729212" duration="295000" />
       <workItem from="1767200584521" duration="248000" />
+<<<<<<< HEAD
       <workItem from="1767288114832" duration="367000" />
       <workItem from="1767301065767" duration="564000" />
       <workItem from="1767434716062" duration="659000" />
+=======
+>>>>>>> parent of 203b5e44 (Client side should work but needs testing)
     </task>
     <servers />
   </component>
