@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
+import java.lang.reflect.Method;
 
 @Mod.EventBusSubscriber(modid = MMMMM.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class RegisterCommands {
@@ -57,6 +58,24 @@ public class RegisterCommands {
         return LiteralArgumentBuilder.literal(name);
     }
 
+    private static boolean hasOpLevel(CommandSourceStack source, int level) {
+        // Avoid hard-linking to CommandSourceStack#hasPermission(int) vs #hasPermissions(int)
+        // (prevents NoSuchMethodError on differently-remapped runtimes).
+        try {
+            Method m = source.getClass().getMethod("hasPermission", int.class);
+            return (boolean) m.invoke(source, level);
+        } catch (ReflectiveOperationException ignored) {
+            // try the other commonly-used name
+        }
+        try {
+            Method m = source.getClass().getMethod("hasPermissions", int.class);
+            return (boolean) m.invoke(source, level);
+        } catch (ReflectiveOperationException e) {
+            LOGGER.error("Unable to check permissions on CommandSourceStack (no hasPermission/hasPermissions). Denying by default.", e);
+            return false;
+        }
+    }
+
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         LOGGER.info("Registering server commands...");
@@ -65,7 +84,7 @@ public class RegisterCommands {
 
         dispatcher.register(lit("mmmmm")
                 .then(lit("save-mods")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> hasOpLevel(source, 2))
                         .executes(context -> {
                             saveModsToZip();
                             context.getSource().sendSuccess(() -> Component.literal("Zipping mods... check console for progress."), true);
@@ -76,7 +95,7 @@ public class RegisterCommands {
 
         dispatcher.register(lit("mmmmm")
                 .then(lit("save-all")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(source -> hasOpLevel(source, 2))
                         .executes(context -> {
                             saveAllToZip();
                             context.getSource().sendSuccess(() -> Component.literal("Mods, config and kubejs have been saved to separate zip files in the shared-files directory"), true);

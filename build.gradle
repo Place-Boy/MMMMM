@@ -74,7 +74,8 @@ minecraft {
     runs {
         // applies to all the run configs below
         configureEach {
-            workingDirectory project.file('run')
+            // Avoid deprecated Task.project usage at execution time
+            workingDirectory file('run')
 
             // Recommended logging data for a userdev environment
             // The markers can be added/remove as needed separated by commas.
@@ -93,20 +94,30 @@ minecraft {
                     source sourceSets.main
                 }
             }
+
+            // Ensure the mixin config is always discovered in dev runs
+            arg "-mixin.config=mmmmm.mixin.json"
+
+            // Force refmap usage (avoid silent disabling)
+            property 'mixin.env.disableRefMap', 'false'
+            // Keep this; harmless even if remapping is handled automatically
+            property 'mixin.env.remapRefMap', 'true'
         }
 
         client {
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             property 'forge.enabledGameTestNamespaces', mod_id
             property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            // Remove/avoid hardcoding a remapping file path that often doesn't exist in FG6+official mappings.
+            // If you truly need it, set it after confirming the file exists for your setup.
+            // property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
         }
 
         server {
             property 'forge.enabledGameTestNamespaces', mod_id
             args '--nogui'
             property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            // property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.
@@ -118,12 +129,12 @@ minecraft {
 
         data {
             // example of overriding the workingDirectory set in configureEach above
-            workingDirectory project.file('run-data')
+            workingDirectory file('run-data')
 
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
             args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
             property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            // property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
         }
     }
 }
@@ -209,8 +220,9 @@ tasks.named('jar', Jar).configure {
 // Configure Shadow to produce a shaded jar bundling toml4j inside your mod jar.
 // NOTE: Relocation is currently disabled; sources import com.moandjiezana.toml.Toml.
 tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
-    // Use no classifier so the shaded jar has the standard name
-    archiveClassifier.set('')
+    // Make the shaded artifact unambiguous so you can’t accidentally deploy the wrong jar.
+    // (If you currently rely on no-classifier, you are very likely copying the wrong jar to the server/mods folder.)
+    archiveClassifier.set('all')
 
     // Exclude signature and manifest signing files that can break jars when merged
     exclude 'META-INF/*.SF'
@@ -242,10 +254,16 @@ tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.Shadow
     mergeServiceFiles()
 }
 
+// Ensure the refmap exists before the shaded jar is built/packaged
+tasks.named('shadowJar').configure {
+    dependsOn tasks.named('syncRefmap')
+}
+
 // Make the normal "build" lifecycle produce the shaded jar
 // The regular jar is still configured above; Shadow will wrap its contents.
 tasks.named('build').configure {
     dependsOn tasks.named('shadowJar')
+    dependsOn tasks.named('verifyRefmap')
 }
 
 // However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing:
@@ -276,4 +294,53 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     // reduce noisy warnings (doesn't change bytecode behavior)
     options.compilerArgs += ['-Xlint:-removal', '-Xlint:unchecked']
+}
+
+// Copy the refmap produced by the annotation processor to the standard resources output name/location
+tasks.register('syncRefmap') {
+    group = 'build'
+    description = 'Copy the generated Mixin refmap into build/resources/main as mmmmm.refmap.json for packaging.'
+    dependsOn tasks.named('compileJava')
+
+    doLast {
+        def generated = file("$buildDir/tmp/compileJava/compileJava-refmap.json")
+        def target = file("$buildDir/resources/main/mmmmm.refmap.json")
+
+        if (!generated.exists() || generated.length() == 0L) {
+            throw new GradleException("Expected generated refmap not found/empty: ${generated}")
+        }
+
+        target.parentFile.mkdirs()
+        ant.copy(file: generated, tofile: target, overwrite: true)
+        println "Refmap synced: ${generated} -> ${target}"
+    }
+}
+
+// Ensure resources exist before jar/shadowJar packaging, and verification sees the synced file
+tasks.named('classes').configure {
+    dependsOn tasks.named('syncRefmap')
+}
+
+// Fail fast if refmap didn't get generated (include the AP default location too).
+tasks.register('verifyRefmap') {
+    group = 'verification'
+    description = 'Verify Mixin refmap was generated.'
+    dependsOn tasks.named('syncRefmap')
+    doLast {
+        def candidates = [
+                file("$buildDir/tmp/compileJava/compileJava-refmap.json"),    // AP default output (what your log shows)
+                file("$buildDir/resources/main/mmmmm.refmap.json"),           // synced packaged location
+                file("$buildDir/classes/java/main/mmmmm.refmap.json")         // unlikely, but keep for completeness
+        ]
+        def found = candidates.find { it.exists() && it.length() > 0L }
+        if (found == null) {
+            throw new GradleException("Mixin refmap was not generated. Checked: ${candidates*.path}")
+        }
+        println "Mixin refmap OK: ${found} (${found.length()} bytes)"
+    }
+}
+
+// keep shadowJar on build, but also verify refmap
+tasks.named('build').configure {
+    dependsOn tasks.named('verifyRefmap')
 }

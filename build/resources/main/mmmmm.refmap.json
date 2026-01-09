@@ -1,0 +1,32 @@
+{
+  "mappings": {
+    "com/mmmmm/mixin/EditServerScreenAccessor": {
+      "serverData": "f_96009_:Lnet/minecraft/client/multiplayer/ServerData;"
+    },
+    "com/mmmmm/mixin/EditServerScreenMixin": {
+      "init": "Lnet/minecraft/client/gui/screens/EditServerScreen;m_7856_()V",
+      "onAdd": "Lnet/minecraft/client/gui/screens/EditServerScreen;m_96045_()V",
+      "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I": "Lnet/minecraft/client/gui/GuiGraphics;m_280430_(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I",
+      "render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V": "Lnet/minecraft/client/gui/screens/EditServerScreen;m_88315_(Lnet/minecraft/client/gui/GuiGraphics;IIF)V"
+    },
+    "com/mmmmm/mixin/JoinMultiplayerScreenMixin": {
+      "init": "Lnet/minecraft/client/gui/screens/multiplayer/JoinMultiplayerScreen;m_7856_()V"
+    }
+  },
+  "data": {
+    "searge": {
+      "com/mmmmm/mixin/EditServerScreenAccessor": {
+        "serverData": "f_96009_:Lnet/minecraft/client/multiplayer/ServerData;"
+      },
+      "com/mmmmm/mixin/EditServerScreenMixin": {
+        "init": "Lnet/minecraft/client/gui/screens/EditServerScreen;m_7856_()V",
+        "onAdd": "Lnet/minecraft/client/gui/screens/EditServerScreen;m_96045_()V",
+        "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I": "Lnet/minecraft/client/gui/GuiGraphics;m_280430_(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I",
+        "render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V": "Lnet/minecraft/client/gui/screens/EditServerScreen;m_88315_(Lnet/minecraft/client/gui/GuiGraphics;IIF)V"
+      },
+      "com/mmmmm/mixin/JoinMultiplayerScreenMixin": {
+        "init": "Lnet/minecraft/client/gui/screens/multiplayer/JoinMultiplayerScreen;m_7856_()V"
+      }
+    }
+  }
+}
