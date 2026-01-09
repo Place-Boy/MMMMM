@@ -1,7 +1,0 @@
-#Port number for the file server to run on
-#Default: 8080
-#Range: 1 ~ 65535
-fileServerPort = 8080
-#When true, the server will exclude server-only mods from the mods.zip (requires internet access to query Modrinth)
-filterServerSideMods = true
-
