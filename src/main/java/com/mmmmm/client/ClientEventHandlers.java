@@ -1,6 +1,7 @@
 package com.mmmmm.client;
 
 import com.mmmmm.Checksum;
+import com.mmmmm.Config;
 import com.mmmmm.MMMMM;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
@@ -9,10 +10,10 @@ import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.ScreenEvent.Init.Post;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,34 +30,18 @@ import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-@Mod.EventBusSubscriber(modid = MMMMM.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class ClientEventHandlers {
 
     private static final int CONNECTION_TIMEOUT_MS = 5000;
-
-    // Downloads saved in shared-files subfolder
-    private static final Path MODS_DOWNLOAD = Path.of("MMMMM/shared-files/mods.zip");
-    private static final Path CONFIG_DOWNLOAD = Path.of("MMMMM/shared-files/config.zip");
-    private static final Path KUBEJS_DOWNLOAD = Path.of("MMMMM/shared-files/kubejs.zip");
-
-    // Unzip destinations
-    private static final Path MODS_DEST = Path.of("mods");
-    private static final Path CONFIG_DEST = Path.of("config");
-    private static final Path KUBEJS_DEST = Path.of("kubejs");
-
-    // Per-package checksum files
-    private static final Path MODS_CHECKSUM = Path.of("MMMMM/mods_checksums.json");
-    private static final Path CONFIG_CHECKSUM = Path.of("MMMMM/config_checksums.json");
-    private static final Path KUBEJS_CHECKSUM = Path.of("MMMMM/kubejs_checksums.json");
-
+    private static final Path MOD_DOWNLOAD_PATH = Path.of("MMMMM/shared-files/mods.zip");
+    private static final Path UNZIP_DESTINATION = Path.of("mods");
+    private static final Path CHECKSUM_FILE = Path.of("MMMMM/mods_checksums.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
     private static final List<Button> serverButtons = new ArrayList<>();
 
-    private static record PackageTask(String name, Path downloadPath, Path unzipDestination, Path checksumFile) {}
-
     @SubscribeEvent
-    public static void onMultiplayerScreenInit(ScreenEvent.Init.Post event) {
-        LOGGER.info("onMultiplayerScreenInit fired"); // At start of onMultiplayerScreenInit
+    public static void onMultiplayerScreenInit(Post event) {
         if (!(event.getScreen() instanceof JoinMultiplayerScreen screen)) {
             return;
         }
@@ -70,26 +55,18 @@ public class ClientEventHandlers {
         int buttonSpacing = 24;
         int maxHeight = screen.height - 50;
 
-        List<Button> buttonsToAdd = new ArrayList<>();
-
-
         for (int i = 0; i < serverList.size(); i++) {
             int yOffset = buttonY + (i * buttonSpacing);
             if (yOffset + 20 > maxHeight) break;
 
             ServerData server = serverList.get(i);
             Button serverButton = createServerButton(buttonX, yOffset, server);
-            buttonsToAdd.add(serverButton);
-            LOGGER.info("Button added to screen: {}", event.getScreen().getClass().getName());
-        }
-        // Add all buttons last, after all other widgets
-        for (Button button : buttonsToAdd) {
-            LOGGER.info("Button added to screen: {}", event.getScreen().getClass().getName());
+            event.addListener(serverButton);
+            serverButtons.add(serverButton);
         }
     }
 
-    public static Button createServerButton(int x, int y, ServerData server) {
-        LOGGER.info("Creating button for server: {}", server.ip); // In createServerButton
+    private static Button createServerButton(int x, int y, ServerData server) {
         return Button.builder(
                 Component.literal("Update"),
                 (btn) -> {
@@ -104,62 +81,45 @@ public class ClientEventHandlers {
         Minecraft minecraft = Minecraft.getInstance();
         TitleScreen titleScreen = new TitleScreen();
 
-        String baseUrl = serverUpdateIP;
-        if (baseUrl == null || baseUrl.isBlank()) {
-            LOGGER.info("No update URL found for " + serverUpdateIP);
+        // Ensure the URL has a protocol
+        String modsUrl = serverUpdateIP;
+        if (modsUrl == null || modsUrl.isBlank()) {
+            LOGGER.info("No mod URL found for " + serverUpdateIP);
             return;
         }
 
-        if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
-            baseUrl = "http://" + baseUrl;
+        if (!modsUrl.startsWith("http://") && !modsUrl.startsWith("https://")) {
+            modsUrl = "http://" + modsUrl;
         }
 
-        final String finalBaseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        if (!modsUrl.endsWith("/mods.zip")) {
+            modsUrl += "/mods.zip";
+        }
 
-        DownloadProgressScreen progressScreen = new DownloadProgressScreen(finalBaseUrl);
+        final String finalModsUrl = modsUrl;
+
+        DownloadProgressScreen progressScreen = new DownloadProgressScreen(modsUrl); // Pass the correct IP/URL
         minecraft.setScreen(progressScreen);
 
         Executors.newSingleThreadExecutor().execute(() -> {
-            List<String> successes = new ArrayList<>();
-            List<String> failures = new ArrayList<>();
-
-            List<PackageTask> tasks = List.of(
-                    new PackageTask("mods", MODS_DOWNLOAD, MODS_DEST, MODS_CHECKSUM),
-                    new PackageTask("config", CONFIG_DOWNLOAD, CONFIG_DEST, CONFIG_CHECKSUM),
-                    new PackageTask("kubejs", KUBEJS_DOWNLOAD, KUBEJS_DEST, KUBEJS_CHECKSUM)
-            );
-
             try {
-                for (PackageTask task : tasks) {
-                    String packageUrl = finalBaseUrl + "/" + task.name + ".zip";
-                    try {
-                        LOGGER.info("Starting download for {} from {}", task.name, packageUrl);
-                        // update UI to show which package is processing
-                        minecraft.execute(() -> minecraft.setScreen(new DownloadProgressScreen(packageUrl)));
+                LOGGER.info("Starting mod download from: {}", finalModsUrl);
 
-                        HttpURLConnection connection = initializeConnection(packageUrl);
-                        downloadFileWithProgress(connection, task.downloadPath, progressScreen);
+                HttpURLConnection connection = initializeConnection(finalModsUrl);
+                downloadFileWithProgress(connection, MOD_DOWNLOAD_PATH, progressScreen);
 
-                        validateDownloadedFile(task.downloadPath);
-                        prepareDestinationDirectory(task.unzipDestination);
-                        compareChecksumsIfExists(task.unzipDestination, task.checksumFile);
-                        extractZipFile(task.downloadPath, task.unzipDestination);
-                        saveUpdatedChecksums(task.unzipDestination, task.checksumFile);
+                // Show extracting mods message
+                minecraft.execute(() -> progressScreen.startExtraction("Extracting mods..."));
+                validateDownloadedFile();
+                prepareDestinationDirectory();
+                compareChecksumsIfExists();
+                extractZipFile();
+                saveUpdatedChecksums();
 
-                        successes.add(task.name);
-                        LOGGER.info("Successfully processed {}", task.name);
-                    } catch (Exception e) {
-                        LOGGER.error("Failed processing " + task.name, e);
-                        failures.add(task.name);
-                        // continue with next package
-                    }
-                }
-
-                if (!failures.isEmpty()) {
-                    sendPlayerMessage("Update completed with errors. Succeeded: " + successes + " Failed: " + failures);
-                } else {
-                    sendPlayerMessage("All packages downloaded, verified, and extracted: " + successes);
-                }
+                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
+            } catch (Exception e) {
+                LOGGER.error("Failed to download or extract mods", e);
+                sendPlayerMessage("Failed to download or extract mods for " + serverUpdateIP + ". Check logs for more details.");
             } finally {
                 minecraft.execute(() -> minecraft.setScreen(titleScreen));
                 Executors.newSingleThreadExecutor().shutdown();
@@ -178,7 +138,7 @@ public class ClientEventHandlers {
         LOGGER.info("Connecting to {} - Response Code: {}", url, responseCode);
 
         if (responseCode != HttpURLConnection.HTTP_OK) {
-            throw new IOException("Failed to fetch package - Server returned response code: " + responseCode);
+            throw new IOException("Failed to fetch mods - Server returned response code: " + responseCode);
         }
 
         return connection;
@@ -187,7 +147,7 @@ public class ClientEventHandlers {
     private static void downloadFileWithProgress(HttpURLConnection connection, Path destination, DownloadProgressScreen progressScreen) throws IOException {
         Files.createDirectories(destination.getParent());
         if (!Files.exists(destination)) {
-            Files.createFile(destination);
+            Files.createFile(destination); // Create the file only if it doesn't exist
         }
         try (InputStream in = connection.getInputStream();
              var out = Files.newOutputStream(destination)) {
@@ -201,14 +161,13 @@ public class ClientEventHandlers {
             while ((bytesRead = in.read(buffer)) != -1) {
                 if (progressScreen.isCancelled()) {
                     LOGGER.info("Download cancelled by user.");
-                    Files.deleteIfExists(destination); // Delete the partially downloaded file
                     return;
                 }
 
                 out.write(buffer, 0, bytesRead);
                 downloadedBytes += bytesRead;
 
-                int progress = totalBytes > 0 ? (int) ((downloadedBytes * 100) / totalBytes) : 0;
+                int progress = (int) ((downloadedBytes * 100) / totalBytes);
                 long elapsedTime = System.currentTimeMillis() - startTime;
                 double speedInKB = elapsedTime > 0 ? (downloadedBytes / 1024.0) / (elapsedTime / 1000.0) : 0.0;
 
@@ -216,37 +175,49 @@ public class ClientEventHandlers {
                         ? String.format("%.2f MB/s", speedInKB / 1024)
                         : String.format("%.2f KB/s", speedInKB);
 
-                progressScreen.updateProgress(progress, speed);
+                // Calculate ETA
+                long bytesRemaining = totalBytes - downloadedBytes;
+                double secondsRemaining = (speedInKB > 0) ? (bytesRemaining / 1024.0) / speedInKB : 0.0;
+                String eta;
+                if (secondsRemaining > 0) {
+                    int minutes = (int) (secondsRemaining / 60);
+                    int seconds = (int) (secondsRemaining % 60);
+                    eta = String.format("%dm %ds", minutes, seconds);
+                } else {
+                    eta = "Calculating...";
+                }
+
+                progressScreen.updateProgress(progress, speed, eta);
             }
         }
     }
 
-    private static void validateDownloadedFile(Path downloadPath) throws IOException {
-        if (!Files.exists(downloadPath) || Files.size(downloadPath) == 0) {
-            throw new IOException("Downloaded file is invalid or empty: " + downloadPath);
+    private static void validateDownloadedFile() throws IOException {
+        if (!Files.exists(MOD_DOWNLOAD_PATH) || Files.size(MOD_DOWNLOAD_PATH) == 0) {
+            throw new IOException("Downloaded file is invalid or empty.");
         }
     }
 
-    private static void prepareDestinationDirectory(Path unzipDestination) throws IOException {
-        if (!Files.exists(unzipDestination)) {
-            Files.createDirectories(unzipDestination);
+    private static void prepareDestinationDirectory() throws IOException {
+        if (!Files.exists(UNZIP_DESTINATION)) {
+            Files.createDirectories(UNZIP_DESTINATION);
         }
     }
 
-    private static void compareChecksumsIfExists(Path unzipDestination, Path checksumFile) throws Exception {
-        if (Files.exists(checksumFile)) {
-            LOGGER.info("Comparing checksums for {} using {}", unzipDestination, checksumFile);
-            Checksum.compareChecksums(unzipDestination, checksumFile);
+    private static void compareChecksumsIfExists() throws Exception {
+        if (Files.exists(CHECKSUM_FILE)) {
+            LOGGER.info("Comparing checksums...");
+            Checksum.compareChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
         }
     }
 
-    private static void extractZipFile(Path zipFilePath, Path unzipDestination) throws IOException {
-        try (InputStream fileInputStream = Files.newInputStream(zipFilePath);
+    private static void extractZipFile() throws IOException {
+        try (InputStream fileInputStream = Files.newInputStream(MOD_DOWNLOAD_PATH);
              ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
 
             ZipEntry entry;
             while ((entry = zipInputStream.getNextEntry()) != null) {
-                Path entryPath = unzipDestination.resolve(entry.getName()).normalize();
+                Path entryPath = UNZIP_DESTINATION.resolve(entry.getName()).normalize();
                 if (entry.isDirectory()) {
                     Files.createDirectories(entryPath);
                 } else {
@@ -258,9 +229,9 @@ public class ClientEventHandlers {
         }
     }
 
-    private static void saveUpdatedChecksums(Path unzipDestination, Path checksumFile) throws Exception {
-        LOGGER.info("Saving updated checksums for {} -> {}", unzipDestination, checksumFile);
-        Checksum.saveChecksums(unzipDestination, checksumFile);
+    private static void saveUpdatedChecksums() throws Exception {
+        LOGGER.info("Saving updated checksums...");
+        Checksum.saveChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
     }
 
     private static void sendPlayerMessage(String message) {

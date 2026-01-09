@@ -1,30 +1,29 @@
 package com.mmmmm;
 
 import com.mojang.logging.LogUtils;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.eventbus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
+/**
+ * Main mod class for ExampleMod.
+ */
 @Mod(MMMMM.MODID)
 public class MMMMM {
+
     public static final String MODID = "mmmmm";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public MMMMM() {
+    public MMMMM(ModContainer modContainer) {
         LOGGER.info("Initializing MMMMM...");
 
-        // Register config
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC, "mmmmm-common.toml");
-        LOGGER.info("Registered config spec hash: {}", Config.SPEC.hashCode());
-
-        // Hook config loading and reloading events
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-        modEventBus.addListener(Config::onLoad);
-        modEventBus.addListener(Config::onReload);
+        // Register configuration
+        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         LOGGER.info("MMMMM initialized.");
+
+        NeoForge.EVENT_BUS.addListener(RegisterCommands::onRegisterCommands);
     }
 }
