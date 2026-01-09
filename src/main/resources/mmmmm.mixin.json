@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8.5",
+  "package": "com.mmmmm.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "mmmmm.refmap.json",
+  "client": [
+    "ScreenAccessorMixin",
+    "EditServerScreenMixin",
+    "EditServerScreenAccessor",
+    "JoinMultiplayerScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
