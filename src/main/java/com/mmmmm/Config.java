@@ -11,14 +11,9 @@ public class Config {
             .comment("Port number for the file server to run on", "Default: 8080")
             .defineInRange("fileServerPort", 8080, 1, 65535);
 
-    public static final ForgeConfigSpec.BooleanValue FILTER_SERVER_SIDE_MODS = BUILDER
-            .comment("When true, the server will exclude server-only mods from the mods.zip (requires internet access to query Modrinth)")
-            .define("filterServerSideMods", true);
-
     public static final ForgeConfigSpec SPEC = BUILDER.build();
 
     public static int fileServerPort;
-    public static boolean filterServerSideMods = true;
 
     static {
         MMMMM.LOGGER.info("Config class static block executed.");
@@ -32,10 +27,8 @@ public class Config {
             return;
         }
         fileServerPort = FILE_SERVER_PORT.get();
-        filterServerSideMods = FILTER_SERVER_SIDE_MODS.get();
         MMMMM.LOGGER.info("Configuration loaded:");
         MMMMM.LOGGER.info("File Server Port: {}", fileServerPort);
-        MMMMM.LOGGER.info("Filter server side mods: {}", filterServerSideMods);
     }
 
     public static void onReload(ModConfigEvent.Reloading event) {
@@ -46,9 +39,7 @@ public class Config {
             return;
         }
         fileServerPort = FILE_SERVER_PORT.get();
-        filterServerSideMods = FILTER_SERVER_SIDE_MODS.get();
         MMMMM.LOGGER.info("Configuration reloaded:");
         MMMMM.LOGGER.info("File Server Port: {}", fileServerPort);
-        MMMMM.LOGGER.info("Filter server side mods: {}", filterServerSideMods);
     }
 }

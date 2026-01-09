@@ -1,0 +1,5 @@
+#Port number for the file server to run on
+#Default: 8080
+#Range: 1 ~ 65535
+fileServerPort = 8080
+

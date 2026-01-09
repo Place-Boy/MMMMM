@@ -1,14 +1,10 @@
 Manifest-Version: 1.0
-Specification-Title: examplemod
-Specification-Vendor: YourNameHere, OtherNameHere
+Specification-Title: mmmmm
+Specification-Vendor: Placebo
 Specification-Version: 1
 Implementation-Title: MMMMM
-Implementation-Version: 1.0.0
-Implementation-Vendor: YourNameHere, OtherNameHere
-<<<<<<< HEAD
-Implementation-Timestamp: 2026-01-08T22:00:44+0000
-=======
-Implementation-Timestamp: 2025-12-31T13:34:17+0000
->>>>>>> parent of 203b5e44 (Client side should work but needs testing)
+Implementation-Version: 1.0.1-beta
+Implementation-Vendor: Placebo
+Implementation-Timestamp: 2026-01-09T11:34:46+0000
 MixinConfigs: mmmmm.mixin.json
 
