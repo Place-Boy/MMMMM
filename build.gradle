@@ -4,6 +4,8 @@ plugins {
     id 'maven-publish'
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
     id 'org.spongepowered.mixin' version '0.7.+'
+    // Add Shadow plugin for shading dependencies like toml4j into the mod jar
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 version = mod_version
@@ -149,6 +151,11 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
+    // TOML parser for reading mods.toml in RegisterCommands (bundled into mod jar)
+    implementation 'com.moandjiezana.toml:toml4j:0.7.2'
+    // Ensure toml4j is explicitly included in the shaded jar
+    shadow 'com.moandjiezana.toml:toml4j:0.7.2'
+
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}")
@@ -197,9 +204,48 @@ tasks.named('jar', Jar).configure {
                 'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
+}
 
-    // This is the preferred method to reobfuscate your jar file
-    finalizedBy 'reobfJar'
+// Configure Shadow to produce a shaded jar bundling toml4j inside your mod jar.
+// NOTE: Relocation is currently disabled; sources import com.moandjiezana.toml.Toml.
+tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
+    // Use no classifier so the shaded jar has the standard name
+    archiveClassifier.set('')
+
+    // Exclude signature and manifest signing files that can break jars when merged
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+
+    // Exclude runtime/host packages that should NOT be shaded (Minecraft, Mojang)
+    exclude 'net/minecraft/**'
+    exclude 'com/mojang/**'
+
+    // Use dependency-level include/exclude rules:
+    dependencies {
+        // Explicitly include toml4j in the shaded jar (version-agnostic)
+        include(dependency('com.moandjiezana.toml:toml4j:.*'))
+
+        // Exclude common runtime-provided libraries by artifact so they are NOT shaded
+        exclude(dependency('org.slf4j:slf4j-api:.*'))
+        exclude(dependency('com.google.code.gson:gson:.*'))
+        exclude(dependency('org.apache.logging.log4j:log4j-api:.*'))
+        exclude(dependency('org.apache.logging.log4j:log4j-core:.*'))
+        // add additional dependency excludes here if needed
+    }
+
+    // Relocation intentionally disabled to keep imports stable.
+    // If you enable relocation later, also update Java sources to use the relocated package.
+    // relocate 'com.moandjiezana.toml', 'com.mmmmm.shaded.toml4j'
+
+    // Optional: merge service files if any dependencies use them
+    mergeServiceFiles()
+}
+
+// Make the normal "build" lifecycle produce the shaded jar
+// The regular jar is still configured above; Shadow will wrap its contents.
+tasks.named('build').configure {
+    dependsOn tasks.named('shadowJar')
 }
 
 // However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing:
@@ -221,6 +267,13 @@ publishing {
     }
 }
 
+
+
+// Leave the standard build lifecycle alone; use the shadowJar output manually when needed
+
+// Ensure Java compilation uses UTF-8
 tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+    options.encoding = 'UTF-8'
+    // reduce noisy warnings (doesn't change bytecode behavior)
+    options.compilerArgs += ['-Xlint:-removal', '-Xlint:unchecked']
 }

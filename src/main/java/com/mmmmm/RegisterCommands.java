@@ -4,25 +4,23 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.moandjiezana.toml.Toml;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -54,14 +52,19 @@ public class RegisterCommands {
     // Track last build time to avoid unnecessary zips
     private static FileTime lastBuildTime = FileTime.fromMillis(0);
 
+    private static LiteralArgumentBuilder<CommandSourceStack> lit(String name) {
+        // Avoid net.minecraft.commands.Commands.literal(...) to prevent NoSuchMethodError on mismatched runtimes.
+        return LiteralArgumentBuilder.literal(name);
+    }
+
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         LOGGER.info("Registering server commands...");
 
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
-        dispatcher.register(Commands.literal("mmmmm")
-                .then(Commands.literal("save-mods")
+        dispatcher.register(lit("mmmmm")
+                .then(lit("save-mods")
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> {
                             saveModsToZip();
@@ -71,8 +74,8 @@ public class RegisterCommands {
                 )
         );
 
-        dispatcher.register(Commands.literal("mmmmm")
-                .then(Commands.literal("save-all")
+        dispatcher.register(lit("mmmmm")
+                .then(lit("save-all")
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> {
                             saveAllToZip();
@@ -86,7 +89,7 @@ public class RegisterCommands {
     public static void saveAllToZip(){
         ExecutorService exec = Executors.newSingleThreadExecutor();
         exec.execute(() -> {
-            saveFolderToZip(Path.of("mods"), Path.of("MMMMM", "shared-files", "mods.zip"));
+            saveModsToZip();
             saveFolderToZip(Path.of("config"), Path.of("MMMMM", "shared-files", "config.zip"));
             saveFolderToZip(Path.of("kubejs"), Path.of("MMMMM", "shared-files", "kubejs.zip"));
         });
@@ -218,21 +221,19 @@ public class RegisterCommands {
     }
 
     private static String getModNameFromJar(Path jarPath) {
-        // Read META-INF/neoforge.mods.toml if present and extract display_name or mods[0].displayName
         try (ZipFile zipFile = new ZipFile(jarPath.toFile())) {
             ZipEntry entry = zipFile.getEntry("META-INF/neoforge.mods.toml");
             if (entry != null) {
-                try (InputStream is = zipFile.getInputStream(entry);
-                     BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-                    StringBuilder sb = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        sb.append(line).append('\n');
+                try (InputStream is = zipFile.getInputStream(entry)) {
+                    Toml toml = new Toml().read(is);
+                    String rootDisplayName = toml.getString("display_name");
+                    if (rootDisplayName != null) return rootDisplayName;
+                    var modsList = toml.getTables("mods");
+                    if (modsList != null && !modsList.isEmpty()) {
+                        Toml firstMod = modsList.get(0);
+                        String modDisplayName = firstMod.getString("displayName");
+                        if (modDisplayName != null) return modDisplayName;
                     }
-                    String toml = sb.toString();
-
-                    String name = extractDisplayNameFromToml(toml);
-                    if (name != null && !name.isBlank()) return name;
                 }
             }
         } catch (Exception e) {
@@ -242,26 +243,6 @@ public class RegisterCommands {
         return jarPath.getFileName().toString();
     }
 
-    private static String extractDisplayNameFromToml(String toml) {
-        // Try root display_name = "..."
-        Pattern p1 = Pattern.compile("(?m)^\\s*display_name\\s*=\\s*\"([^\"]+)\"");
-        Matcher m1 = p1.matcher(toml);
-        if (m1.find()) return m1.group(1).trim();
-
-        // Try mods table first entry displayName
-        // Look for something like [[mods]] then find displayName = "..." after it
-        Pattern modsTable = Pattern.compile("(?m)^\\s*\\[\\[mods\\]\\]", Pattern.MULTILINE);
-        Matcher mTable = modsTable.matcher(toml);
-        if (mTable.find()) {
-            int start = mTable.end();
-            String after = toml.substring(start);
-            Pattern p2 = Pattern.compile("(?m)^\\s*displayName\\s*=\\s*\"([^\"]+)\"");
-            Matcher m2 = p2.matcher(after);
-            if (m2.find()) return m2.group(1).trim();
-        }
-
-        return null;
-    }
 
     private static boolean isServerOnlyMod(String modName) {
         if (modrinthCache.containsKey(modName)) {
@@ -269,9 +250,8 @@ public class RegisterCommands {
         }
 
         try {
-            String encoded = URLEncoder.encode(modName, StandardCharsets.UTF_8.name());
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.modrinth.com/v2/search?query=" + encoded))
+                    .uri(URI.create("https://api.modrinth.com/v2/search?query=" + URLEncoder.encode(modName, "UTF-8")))
                     .header("User-Agent", "Place-Boy/https://github.com/Place-Boy/MMMMM/1.0.1-beta")
                     .GET()
                     .build();
