@@ -282,7 +282,7 @@ public class RegisterCommands {
             String query = URLEncoder.encode(modName, StandardCharsets.UTF_8);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.modrinth.com/v2/search?query=" + query))
-                    .header("User-Agent", "MMMMM/" + MMMMM.MODID)
+                    .header("User-Agent", "Place-Boy/https://github.com/Place-Boy/MMMMM/1.0.2-beta")
                     .GET()
                     .build();
 
