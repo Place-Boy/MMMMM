@@ -68,6 +68,13 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 configurations {
     runtimeClasspath.extendsFrom localRuntime
+
+    // Resolvable configuration for shadow only, extending implementation
+    shadowImplementation {
+        canBeResolved = true
+        canBeConsumed = false
+        extendsFrom implementation
+    }
 }
 
 dependencies {
@@ -129,18 +136,31 @@ jar {
 // Shadow JAR with only external dependencies relocated
 tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
     archiveClassifier.set("")
+
+    // Only include the specific dependencies we want to relocate
+    configurations = [project.configurations.shadowImplementation]
+    dependencies {
+        include(dependency('com.moandjiezana.toml:toml4j'))
+        include(dependency('org.json:json'))
+    }
+
+    // Relocate the selected deps
     relocate 'com.moandjiezana.toml', 'com.mmmmm.shaded.toml'
     relocate 'com.moandjiezana.github.oshi', 'com.mmmmm.github.oshi'
-    exclude 'com/mmmmm/**'
+    relocate 'org.json', 'com.mmmmm.shaded.json'
+
+    // Do NOT pull Minecraft/NeoForge/LWJGL/etc into the shaded jar
+    exclude 'net/minecraft/**'
+    exclude 'net/neoforged/**'
+    exclude 'org/lwjgl/**'
+
     // Exclude test classes and resources
     exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
     exclude 'test/**', '**/Test*.class', '**/*Test.class'
-    exclude 'net/minecraft/**'
-    exclude 'net/neoforged/**'
-    // Exclude specific libraries if not needed
-    // exclude 'org/json/**'
-}
 
+    // Keep your own classes in the final jar; jar plugin will merge them
+    // so we do not exclude 'com/mmmmm/**' here.
+}
 
 // Make the build task use shadowJar
 tasks.build.dependsOn tasks.shadowJar

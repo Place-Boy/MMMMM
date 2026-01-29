@@ -101,6 +101,17 @@ public class RegisterCommands {
 
                 LOGGER.info("Starting mods.zip creation. Found {} mods.", modFiles.size());
 
+                // Ensure parent directories exist for mods.zip
+                try {
+                    Path parent = modsZip.getParent();
+                    if (parent != null) {
+                        Files.createDirectories(parent);
+                    }
+                } catch (IOException e) {
+                    LOGGER.error("Failed to create directories for mods.zip", e);
+                    return;
+                }
+
                 try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(modsZip))) {
                     int total = modFiles.size();
                     int index = 0;
