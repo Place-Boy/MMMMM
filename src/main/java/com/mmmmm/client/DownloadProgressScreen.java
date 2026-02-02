@@ -8,7 +8,8 @@ import net.minecraft.network.chat.Component;
 
 public class DownloadProgressScreen extends Screen {
 
-    private final String serverUpdateIP; // Use the correct server update IP
+    private volatile String downloadSource; // Use the correct download source
+    private volatile String downloadLabel; // Current download label (mods/config)
     private int progress = 0; // Progress percentage (0-100)
     private String downloadSpeed = "0 KB/s"; // Download speed
     private String estimatedTimeRemaining = ""; // Estimated time remaining
@@ -17,9 +18,10 @@ public class DownloadProgressScreen extends Screen {
     private String extractionMessage = ""; // Message shown during extraction
 
 
-    public DownloadProgressScreen(String serverIP) {
-        super(Component.literal("Downloading Mods"));
-        this.serverUpdateIP = serverIP; // Set the correct server update IP
+    public DownloadProgressScreen(String downloadLabel, String downloadSource) {
+        super(Component.literal("Downloading Update"));
+        this.downloadLabel = downloadLabel == null || downloadLabel.isBlank() ? "files" : downloadLabel;
+        this.downloadSource = downloadSource == null || downloadSource.isBlank() ? "server" : downloadSource;
     }
 
     private volatile boolean isCancelled = false;
@@ -46,6 +48,19 @@ public class DownloadProgressScreen extends Screen {
      */
     public boolean isCancelled() {
         return isCancelled;
+    }
+
+    /**
+     * Resets the UI for a new download.
+     */
+    public void startNewDownload(String downloadLabel, String downloadSource) {
+        this.downloadLabel = downloadLabel == null || downloadLabel.isBlank() ? "files" : downloadLabel;
+        this.downloadSource = downloadSource == null || downloadSource.isBlank() ? "server" : downloadSource;
+        this.progress = 0;
+        this.downloadSpeed = "0 KB/s";
+        this.estimatedTimeRemaining = "";
+        this.isExtracting = false;
+        this.extractionMessage = "";
     }
 
     /**
@@ -76,8 +91,8 @@ public class DownloadProgressScreen extends Screen {
 
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
 
-        // Draw the title with the correct server update IP
-        guiGraphics.drawCenteredString(this.font, "Downloading mods from " + serverUpdateIP, this.width / 2, 20, 0xFFFFFF);
+        // Draw the title with the correct download source
+        guiGraphics.drawCenteredString(this.font, "Downloading " + downloadLabel + " from " + downloadSource, this.width / 2, 20, 0xFFFFFF);
 
         int barWidth = 200;
         int barHeight = 20;

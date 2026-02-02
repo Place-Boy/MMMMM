@@ -34,9 +34,14 @@ import java.util.zip.ZipInputStream;
 public class ClientEventHandlers {
 
     private static final int CONNECTION_TIMEOUT_MS = 5000;
-    private static final Path MOD_DOWNLOAD_PATH = Path.of("MMMMM/shared-files/mods.zip");
-    private static final Path UNZIP_DESTINATION = Path.of("mods");
-    private static final Path CHECKSUM_FILE = Path.of("MMMMM/mods_checksums.json");
+    private static final String MOD_ZIP_NAME = "mods.zip";
+    private static final String CONFIG_ZIP_NAME = "config.zip";
+    private static final Path MOD_DOWNLOAD_PATH = Path.of("MMMMM/shared-files", MOD_ZIP_NAME);
+    private static final Path MOD_UNZIP_DESTINATION = Path.of("mods");
+    private static final Path MOD_CHECKSUM_FILE = Path.of("MMMMM/mods_checksums.json");
+    private static final Path CONFIG_DOWNLOAD_PATH = Path.of("MMMMM/shared-files", CONFIG_ZIP_NAME);
+    private static final Path CONFIG_UNZIP_DESTINATION = Path.of("config");
+    private static final Path CONFIG_CHECKSUM_FILE = Path.of("MMMMM/config_checksums.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
     private static final List<Button> serverButtons = new ArrayList<>();
 
@@ -81,53 +86,148 @@ public class ClientEventHandlers {
         Minecraft minecraft = Minecraft.getInstance();
         TitleScreen titleScreen = new TitleScreen();
 
-        // Ensure the URL has a protocol
-        String modsUrl = serverUpdateIP;
-        if (modsUrl == null || modsUrl.isBlank()) {
-            LOGGER.info("No mod URL found for " + serverUpdateIP);
+        String modsUrl = buildDownloadUrl(serverUpdateIP, MOD_ZIP_NAME);
+        if (modsUrl == null) {
+            LOGGER.info("No mod URL found for {}", serverUpdateIP);
             return;
         }
 
-        if (!modsUrl.startsWith("http://") && !modsUrl.startsWith("https://")) {
-            modsUrl = "http://" + modsUrl;
-        }
-
-        if (!modsUrl.endsWith("/mods.zip")) {
-            modsUrl += "/mods.zip";
-        }
-
-        final String finalModsUrl = modsUrl;
-
-        DownloadProgressScreen progressScreen = new DownloadProgressScreen(modsUrl); // Pass the correct IP/URL
+        DownloadProgressScreen progressScreen = new DownloadProgressScreen("mods", modsUrl);
         minecraft.setScreen(progressScreen);
 
         Executors.newSingleThreadExecutor().execute(() -> {
+            boolean modsUpdated = false;
+            boolean configUpdated = false;
+            boolean cancelled = false;
+
             try {
-                LOGGER.info("Starting mod download from: {}", finalModsUrl);
+                LOGGER.info("Starting mod download from: {}", modsUrl);
 
-                HttpURLConnection connection = initializeConnection(finalModsUrl);
-                downloadFileWithProgress(connection, MOD_DOWNLOAD_PATH, progressScreen);
+                modsUpdated = downloadAndProcessZip(
+                        minecraft,
+                        progressScreen,
+                        modsUrl,
+                        "mods",
+                        MOD_DOWNLOAD_PATH,
+                        MOD_UNZIP_DESTINATION,
+                        MOD_CHECKSUM_FILE
+                );
 
-                // Show extracting mods message
-                minecraft.execute(() -> progressScreen.startExtraction("Extracting mods..."));
-                validateDownloadedFile();
-                prepareDestinationDirectory();
-                compareChecksumsIfExists();
-                extractZipFile();
-                saveUpdatedChecksums();
+                if (!modsUpdated) {
+                    cancelled = progressScreen.isCancelled();
+                    return;
+                }
 
-                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
+                if (Config.updateConfig) {
+                    String configUrl = buildDownloadUrl(serverUpdateIP, CONFIG_ZIP_NAME);
+                    if (configUrl == null) {
+                        LOGGER.warn("Config update enabled but no config URL found for {}", serverUpdateIP);
+                    } else {
+                        LOGGER.info("Starting config download from: {}", configUrl);
+                        try {
+                            configUpdated = downloadAndProcessZip(
+                                    minecraft,
+                                    progressScreen,
+                                    configUrl,
+                                    "config",
+                                    CONFIG_DOWNLOAD_PATH,
+                                    CONFIG_UNZIP_DESTINATION,
+                                    CONFIG_CHECKSUM_FILE
+                            );
+                            if (!configUpdated) {
+                                cancelled = progressScreen.isCancelled();
+                                return;
+                            }
+                        } catch (Exception e) {
+                            LOGGER.error("Failed to download or extract config", e);
+                        }
+                    }
+                }
             } catch (Exception e) {
                 LOGGER.error("Failed to download or extract mods", e);
                 sendPlayerMessage("Failed to download or extract mods for " + serverUpdateIP + ". Check logs for more details.");
+                return;
             } finally {
                 minecraft.execute(() -> minecraft.setScreen(titleScreen));
                 Executors.newSingleThreadExecutor().shutdown();
             }
+
+            if (cancelled) {
+                sendPlayerMessage("Update cancelled.");
+                return;
+            }
+
+            if (Config.updateConfig) {
+                if (configUpdated) {
+                    sendPlayerMessage("Mods and config downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
+                } else {
+                    sendPlayerMessage("Mods updated for " + serverUpdateIP + ", but config update failed. Check logs for more details.");
+                }
+            } else {
+                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
+            }
         });
     }
 
-    private static HttpURLConnection initializeConnection(String url) throws IOException {
+    private static String buildDownloadUrl(String serverUpdateIP, String zipFileName) {
+        if (serverUpdateIP == null || serverUpdateIP.isBlank()) {
+            return null;
+        }
+
+        String baseUrl = serverUpdateIP;
+        if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
+            baseUrl = "http://" + baseUrl;
+        }
+
+        String expectedSuffix = "/" + zipFileName;
+        if (baseUrl.endsWith(expectedSuffix)) {
+            return baseUrl;
+        }
+
+        int lastSlash = baseUrl.lastIndexOf('/');
+        if (lastSlash > baseUrl.indexOf("://") + 2) {
+            String lastSegment = baseUrl.substring(lastSlash + 1);
+            if (lastSegment.endsWith(".zip")) {
+                baseUrl = baseUrl.substring(0, lastSlash);
+            }
+        }
+
+        if (baseUrl.endsWith("/")) {
+            return baseUrl + zipFileName;
+        }
+
+        return baseUrl + expectedSuffix;
+    }
+
+    private static boolean downloadAndProcessZip(
+            Minecraft minecraft,
+            DownloadProgressScreen progressScreen,
+            String downloadUrl,
+            String displayName,
+            Path downloadPath,
+            Path unzipDestination,
+            Path checksumFile
+    ) throws Exception {
+        minecraft.execute(() -> progressScreen.startNewDownload(displayName, downloadUrl));
+
+        HttpURLConnection connection = initializeConnection(downloadUrl, displayName);
+        downloadFileWithProgress(connection, downloadPath, progressScreen);
+
+        if (progressScreen.isCancelled()) {
+            LOGGER.info("{} download cancelled by user.", displayName);
+            return false;
+        }
+
+        minecraft.execute(() -> progressScreen.startExtraction("Extracting " + displayName + "..."));
+        validateDownloadedFile(downloadPath, displayName);
+        prepareDestinationDirectory(unzipDestination);
+        compareChecksumsIfExists(unzipDestination, checksumFile);
+        extractZipFile(downloadPath, unzipDestination);
+        saveUpdatedChecksums(unzipDestination, checksumFile);
+        return true;
+    }
+
+    private static HttpURLConnection initializeConnection(String url, String displayName) throws IOException {
         URL downloadUrl = new URL(url);
         HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
         connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
@@ -138,7 +238,7 @@ public class ClientEventHandlers {
         LOGGER.info("Connecting to {} - Response Code: {}", url, responseCode);
 
         if (responseCode != HttpURLConnection.HTTP_OK) {
-            throw new IOException("Failed to fetch mods - Server returned response code: " + responseCode);
+            throw new IOException("Failed to fetch " + displayName + " - Server returned response code: " + responseCode);
         }
 
         return connection;
@@ -192,32 +292,32 @@ public class ClientEventHandlers {
         }
     }
 
-    private static void validateDownloadedFile() throws IOException {
-        if (!Files.exists(MOD_DOWNLOAD_PATH) || Files.size(MOD_DOWNLOAD_PATH) == 0) {
-            throw new IOException("Downloaded file is invalid or empty.");
+    private static void validateDownloadedFile(Path downloadPath, String displayName) throws IOException {
+        if (!Files.exists(downloadPath) || Files.size(downloadPath) == 0) {
+            throw new IOException("Downloaded " + displayName + " file is invalid or empty.");
         }
     }
 
-    private static void prepareDestinationDirectory() throws IOException {
-        if (!Files.exists(UNZIP_DESTINATION)) {
-            Files.createDirectories(UNZIP_DESTINATION);
+    private static void prepareDestinationDirectory(Path destination) throws IOException {
+        if (!Files.exists(destination)) {
+            Files.createDirectories(destination);
         }
     }
 
-    private static void compareChecksumsIfExists() throws Exception {
-        if (Files.exists(CHECKSUM_FILE)) {
+    private static void compareChecksumsIfExists(Path targetDirectory, Path checksumFile) throws Exception {
+        if (Files.exists(checksumFile)) {
             LOGGER.info("Comparing checksums...");
-            Checksum.compareChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
+            Checksum.compareChecksums(targetDirectory, checksumFile);
         }
     }
 
-    private static void extractZipFile() throws IOException {
-        try (InputStream fileInputStream = Files.newInputStream(MOD_DOWNLOAD_PATH);
+    private static void extractZipFile(Path zipPath, Path destination) throws IOException {
+        try (InputStream fileInputStream = Files.newInputStream(zipPath);
              ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
 
             ZipEntry entry;
             while ((entry = zipInputStream.getNextEntry()) != null) {
-                Path entryPath = UNZIP_DESTINATION.resolve(entry.getName()).normalize();
+                Path entryPath = destination.resolve(entry.getName()).normalize();
                 if (entry.isDirectory()) {
                     Files.createDirectories(entryPath);
                 } else {
@@ -229,9 +329,9 @@ public class ClientEventHandlers {
         }
     }
 
-    private static void saveUpdatedChecksums() throws Exception {
+    private static void saveUpdatedChecksums(Path targetDirectory, Path checksumFile) throws Exception {
         LOGGER.info("Saving updated checksums...");
-        Checksum.saveChecksums(UNZIP_DESTINATION, CHECKSUM_FILE);
+        Checksum.saveChecksums(targetDirectory, checksumFile);
     }
 
     private static void sendPlayerMessage(String message) {
