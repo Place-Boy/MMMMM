@@ -5,7 +5,7 @@ import com.mmmmm.core.Config;
 import com.mmmmm.core.MMMMM;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.zip.ZipFile;
@@ -57,6 +58,57 @@ public class ClientEventHandlers {
     private static final Path CONFIG_UNZIP_DESTINATION = Path.of("config");
     private static final Path CONFIG_CHECKSUM_FILE = Path.of("MMMMM/config_checksums.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
+    private static final int MAX_CHANGE_LIST_ITEMS = 5;
+
+    private static final class UpdateSummary {
+        private final String title;
+        private final List<String> lines;
+
+        private UpdateSummary(String title, List<String> lines) {
+            this.title = title;
+            this.lines = lines;
+        }
+    }
+
+    private static final class UpdateOutcome {
+        private final boolean cancelled;
+        private final boolean success;
+        private final Checksum.ChecksumDiff diff;
+
+        private UpdateOutcome(boolean cancelled, boolean success, Checksum.ChecksumDiff diff) {
+            this.cancelled = cancelled;
+            this.success = success;
+            this.diff = diff;
+        }
+
+        private static UpdateOutcome cancelled() {
+            return new UpdateOutcome(true, false, null);
+        }
+
+        private static UpdateOutcome success(Checksum.ChecksumDiff diff) {
+            return new UpdateOutcome(false, true, diff);
+        }
+
+        private static UpdateOutcome failed() {
+            return new UpdateOutcome(false, false, null);
+        }
+
+        private boolean isCancelled() {
+            return cancelled;
+        }
+
+        private boolean isSuccess() {
+            return success;
+        }
+
+        private Checksum.ChecksumDiff getDiff() {
+            return diff;
+        }
+
+        private boolean hasChanges() {
+            return diff != null && !diff.isEmpty();
+        }
+    }
 
     @SubscribeEvent
     public static void onMultiplayerScreenInit(Post event) {
@@ -96,7 +148,7 @@ public class ClientEventHandlers {
 
     private static void runUpdateForServer(String updateBaseUrl) {
         Minecraft minecraft = Minecraft.getInstance();
-        TitleScreen titleScreen = new TitleScreen();
+        Screen returnScreen = minecraft.screen;
 
         String modsUrl = buildDownloadUrl(updateBaseUrl, MOD_ZIP_NAME);
         if (modsUrl == null) {
@@ -104,29 +156,28 @@ public class ClientEventHandlers {
             return;
         }
 
-        DownloadProgressScreen progressScreen = new DownloadProgressScreen("mods", modsUrl);
+        DownloadProgressScreen progressScreen = new DownloadProgressScreen("mods", modsUrl, returnScreen);
         minecraft.setScreen(progressScreen);
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.execute(() -> performUpdateFlow(updateBaseUrl, modsUrl, minecraft, titleScreen, progressScreen, executor));
+        executor.execute(() -> performUpdateFlow(updateBaseUrl, modsUrl, minecraft, progressScreen, executor));
     }
 
     private static void performUpdateFlow(
             String updateBaseUrl,
             String modsUrl,
             Minecraft minecraft,
-            TitleScreen titleScreen,
             DownloadProgressScreen progressScreen,
             ExecutorService executor
     ) {
-        boolean modsUpdated = false;
-        boolean configUpdated = !Config.updateConfig;
+        UpdateOutcome modsOutcome = UpdateOutcome.failed();
+        UpdateOutcome configOutcome = Config.updateConfig ? UpdateOutcome.failed() : UpdateOutcome.success(null);
         boolean cancelled = false;
 
         try {
             LOGGER.info("Starting mod download from: {}", modsUrl);
 
-            modsUpdated = downloadAndApplyZipUpdate(
+            modsOutcome = downloadAndApplyZipUpdate(
                     minecraft,
                     progressScreen,
                     modsUrl,
@@ -137,44 +188,40 @@ public class ClientEventHandlers {
                     true
             );
 
-            if (!modsUpdated) {
-                cancelled = progressScreen.isCancelled();
+            if (modsOutcome.isCancelled()) {
+                cancelled = true;
                 return;
             }
 
             if (Config.updateConfig) {
-                configUpdated = downloadConfigUpdate(updateBaseUrl, minecraft, progressScreen);
-                if (!configUpdated) {
-                    cancelled = progressScreen.isCancelled();
+                configOutcome = downloadConfigUpdate(updateBaseUrl, minecraft, progressScreen);
+                if (configOutcome.isCancelled()) {
+                    cancelled = true;
                     return;
                 }
             }
         } catch (Exception e) {
             LOGGER.error("Failed to download or extract mods", e);
-            sendPlayerMessage("Failed to download or extract mods for " + updateBaseUrl + ". Check logs for more details.");
+            UpdateSummary summary = buildUpdateSummary(updateBaseUrl, modsOutcome, configOutcome, true);
+            minecraft.execute(() -> progressScreen.showSummary(summary.title, summary.lines));
+            sendPlayerMessages(minecraft, summary.lines);
             return;
         } finally {
-            minecraft.execute(() -> minecraft.setScreen(titleScreen));
             executor.shutdown();
         }
 
         if (cancelled) {
-            sendPlayerMessage("Update cancelled.");
+            minecraft.execute(() -> progressScreen.showSummary("Update cancelled", List.of("Update cancelled by user.")));
+            sendPlayerMessages(minecraft, List.of("Update cancelled by user."));
             return;
         }
 
-        if (Config.updateConfig) {
-            if (configUpdated) {
-                sendPlayerMessage("Mods and config downloaded, verified, and extracted successfully for " + updateBaseUrl + "!");
-            } else {
-                sendPlayerMessage("Mods updated for " + updateBaseUrl + ", but config update failed. Check logs for more details.");
-            }
-        } else {
-            sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + updateBaseUrl + "!");
-        }
+        UpdateSummary summary = buildUpdateSummary(updateBaseUrl, modsOutcome, configOutcome, false);
+        minecraft.execute(() -> progressScreen.showSummary(summary.title, summary.lines));
+        sendPlayerMessages(minecraft, summary.lines);
     }
 
-    private static boolean downloadConfigUpdate(
+    private static UpdateOutcome downloadConfigUpdate(
             String updateBaseUrl,
             Minecraft minecraft,
             DownloadProgressScreen progressScreen
@@ -182,7 +229,7 @@ public class ClientEventHandlers {
         String configUrl = buildDownloadUrl(updateBaseUrl, CONFIG_ZIP_NAME);
         if (configUrl == null) {
             LOGGER.warn("Config update enabled but no config URL found for {}", updateBaseUrl);
-            return false;
+            return UpdateOutcome.failed();
         }
 
         LOGGER.info("Starting config download from: {}", configUrl);
@@ -199,7 +246,7 @@ public class ClientEventHandlers {
             );
         } catch (Exception e) {
             LOGGER.error("Failed to download or extract config", e);
-            return false;
+            return UpdateOutcome.failed();
         }
     }
 
@@ -233,7 +280,7 @@ public class ClientEventHandlers {
         return baseUrl + expectedSuffix;
     }
 
-    private static boolean downloadAndApplyZipUpdate(
+    private static UpdateOutcome downloadAndApplyZipUpdate(
             Minecraft minecraft,
             DownloadProgressScreen progressScreen,
             String downloadUrl,
@@ -250,21 +297,27 @@ public class ClientEventHandlers {
 
         if (progressScreen.isCancelled()) {
             LOGGER.info("{} download cancelled by user.", displayName);
-            return false;
+            return UpdateOutcome.cancelled();
         }
 
-        minecraft.execute(() -> progressScreen.startExtraction("Extracting " + displayName + "..."));
+        minecraft.execute(() -> progressScreen.startProcessing("Preparing " + displayName + "...", "Validating download..."));
         validateDownloadedFile(downloadPath, displayName);
         prepareDestinationDirectory(unzipDestination);
+        Set<String> extractedFiles = null;
         if (syncModsById) {
             LOGGER.info("Using modId sync extraction for {}", displayName);
-            extractModsZipFileWithModIdSync(downloadPath, unzipDestination);
+            extractModsZipFileWithModIdSync(downloadPath, unzipDestination, progressScreen);
         } else {
-            extractZipFile(downloadPath, unzipDestination);
+            extractedFiles = extractZipFile(downloadPath, unzipDestination, progressScreen, displayName);
         }
-        compareChecksumsIfExists(unzipDestination, checksumFile);
-        saveUpdatedChecksums(unzipDestination, checksumFile);
-        return true;
+        Checksum.ChecksumDiff diff = computeAndSaveChecksums(
+                unzipDestination,
+                checksumFile,
+                progressScreen,
+                displayName,
+                extractedFiles
+        );
+        return UpdateOutcome.success(diff);
     }
 
     private static HttpURLConnection initializeConnection(String url, String displayName) throws IOException {
@@ -360,48 +413,99 @@ public class ClientEventHandlers {
         }
     }
 
-    private static void compareChecksumsIfExists(Path targetDirectory, Path checksumFile) throws Exception {
-        if (Files.exists(checksumFile)) {
-            LOGGER.info("Comparing checksums...");
-            Checksum.compareChecksums(targetDirectory, checksumFile);
+    private static Checksum.ChecksumDiff computeAndSaveChecksums(
+            Path targetDirectory,
+            Path checksumFile,
+            DownloadProgressScreen progressScreen,
+            String displayName,
+            Set<String> filterFiles
+    ) throws Exception {
+        LOGGER.info("Comparing checksums...");
+        updateProcessing(progressScreen, "Comparing " + displayName + " checksums...", "Scanning files...", 0, false);
+        Checksum.ChecksumResult result = Checksum.compareChecksums(
+                targetDirectory,
+                checksumFile,
+                (current, total, fileName) -> {
+                    boolean hasTotal = total > 0;
+                    int progress = hasTotal ? (int) ((current * 100L) / total) : 0;
+                    String detail = hasTotal
+                            ? String.format("%d/%d: %s", current, total, fileName)
+                            : String.format("%d files... %s", current, fileName);
+                    updateProcessing(progressScreen, "Comparing " + displayName + " checksums...", detail, progress, total > 0);
+                }
+        );
+        Checksum.saveChecksums(checksumFile, result.getNewChecksums());
+        Checksum.ChecksumDiff diff = result.getDiff();
+        if (filterFiles != null && !filterFiles.isEmpty()) {
+            diff = Checksum.filterDiff(diff, filterFiles);
         }
+        return diff;
     }
 
-    private static void extractZipFile(Path zipPath, Path destination) throws IOException {
-        try (InputStream fileInputStream = Files.newInputStream(zipPath);
-             ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
+    private static Set<String> extractZipFile(
+            Path zipPath,
+            Path destination,
+            DownloadProgressScreen progressScreen,
+            String displayName
+    ) throws IOException {
+        Set<String> extractedFiles = new HashSet<>();
+        try (ZipFile zipFile = new ZipFile(zipPath.toFile())) {
+            List<? extends ZipEntry> entries = Collections.list(zipFile.entries());
+            int total = entries.size();
+            int current = 0;
+            for (ZipEntry entry : entries) {
+                current++;
+                String entryName = entry.getName();
+                int progress = total > 0 ? (int) ((current * 100L) / total) : 0;
+                String detail = total > 0
+                        ? String.format("%d/%d: %s", current, total, entryName)
+                        : entryName;
+                updateProcessing(progressScreen, "Extracting " + displayName + "...", detail, progress, total > 0);
 
-            ZipEntry entry;
-            while ((entry = zipInputStream.getNextEntry()) != null) {
-                Path entryPath = destination.resolve(entry.getName()).normalize();
+                Path entryPath = destination.resolve(entryName).normalize();
                 if (!entryPath.startsWith(destination)) {
-                    throw new IOException("Blocked zip entry outside destination: " + entry.getName());
+                    throw new IOException("Blocked zip entry outside destination: " + entryName);
                 }
                 if (entry.isDirectory()) {
                     Files.createDirectories(entryPath);
                 } else {
                     Files.createDirectories(entryPath.getParent());
-                    Files.copy(zipInputStream, entryPath, StandardCopyOption.REPLACE_EXISTING);
+                    try (InputStream is = zipFile.getInputStream(entry)) {
+                        Files.copy(is, entryPath, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                    extractedFiles.add(entryPath.getFileName().toString());
                 }
-                zipInputStream.closeEntry();
             }
         }
+        return extractedFiles;
     }
 
-    private static void extractModsZipFileWithModIdSync(Path zipPath, Path destination) throws Exception {
-        Map<String, List<Path>> existingModsById = indexInstalledModsById(destination);
+    private static void extractModsZipFileWithModIdSync(
+            Path zipPath,
+            Path destination,
+            DownloadProgressScreen progressScreen
+    ) throws Exception {
+        Map<String, List<Path>> existingModsById = indexInstalledModsById(destination, progressScreen);
         LOGGER.info("Indexed {} modIds in {}", existingModsById.size(), destination);
 
         try (ZipFile zipFile = new ZipFile(zipPath.toFile())) {
-            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            List<? extends ZipEntry> entries = Collections.list(zipFile.entries());
+            int total = entries.size();
+            int current = 0;
 
-            while (entries.hasMoreElements()) {
-                ZipEntry entry = entries.nextElement();
+            for (ZipEntry entry : entries) {
+                current++;
                 String entryName = entry.getName();
                 Path entryPath = destination.resolve(entryName).normalize();
                 if (!entryPath.startsWith(destination)) {
                     throw new IOException("Blocked zip entry outside destination: " + entryName);
                 }
+
+                int progress = total > 0 ? (int) ((current * 100L) / total) : 0;
+                String detail = total > 0
+                        ? String.format("%d/%d: %s", current, total, entryName)
+                        : entryName;
+                updateProcessing(progressScreen, "Extracting mods...", detail, progress, total > 0);
 
                 if (entry.isDirectory()) {
                     Files.createDirectories(entryPath);
@@ -461,29 +565,46 @@ public class ClientEventHandlers {
         }
     }
 
-    private static Map<String, List<Path>> indexInstalledModsById(Path modsDirectory) {
+    private static Map<String, List<Path>> indexInstalledModsById(
+            Path modsDirectory,
+            DownloadProgressScreen progressScreen
+    ) {
         Map<String, List<Path>> byId = new HashMap<>();
         if (!Files.exists(modsDirectory)) {
             return byId;
         }
 
+        List<Path> jarPaths;
         try (var stream = Files.walk(modsDirectory)) {
-            stream.filter(path -> Files.isRegularFile(path) && path.toString().toLowerCase().endsWith(".jar"))
-                    .forEach(jarPath -> {
-                        try {
-                            Set<String> modIds = getModIdsFromJarFile(jarPath);
-                            for (String modId : modIds) {
-                                if (modId == null || modId.isBlank()) {
-                                    continue;
-                                }
-                                byId.computeIfAbsent(modId, k -> new ArrayList<>()).add(jarPath);
-                            }
-                        } catch (Exception e) {
-                            LOGGER.debug("Failed to read modId from installed jar: {}", jarPath, e);
-                        }
-                    });
+            jarPaths = stream
+                    .filter(path -> Files.isRegularFile(path) && path.toString().toLowerCase().endsWith(".jar"))
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             LOGGER.warn("Failed to index installed mods in {}", modsDirectory, e);
+            return byId;
+        }
+
+        int total = jarPaths.size();
+        int current = 0;
+        for (Path jarPath : jarPaths) {
+            current++;
+            int progress = total > 0 ? (int) ((current * 100L) / total) : 0;
+            String detail = total > 0
+                    ? String.format("%d/%d: %s", current, total, jarPath.getFileName())
+                    : jarPath.getFileName().toString();
+            updateProcessing(progressScreen, "Indexing installed mods...", detail, progress, total > 0);
+
+            try {
+                Set<String> modIds = getModIdsFromJarFile(jarPath);
+                for (String modId : modIds) {
+                    if (modId == null || modId.isBlank()) {
+                        continue;
+                    }
+                    byId.computeIfAbsent(modId, k -> new ArrayList<>()).add(jarPath);
+                }
+            } catch (Exception e) {
+                LOGGER.debug("Failed to read modId from installed jar: {}", jarPath, e);
+            }
         }
 
         return byId;
@@ -543,14 +664,127 @@ public class ClientEventHandlers {
         return modIds;
     }
 
-    private static void saveUpdatedChecksums(Path targetDirectory, Path checksumFile) throws Exception {
-        LOGGER.info("Saving updated checksums...");
-        Checksum.saveChecksums(targetDirectory, checksumFile);
+    private static UpdateSummary buildUpdateSummary(
+            String updateBaseUrl,
+            UpdateOutcome modsOutcome,
+            UpdateOutcome configOutcome,
+            boolean failedEarly
+    ) {
+        List<String> lines = new ArrayList<>();
+        boolean configAttempted = Config.updateConfig;
+        boolean modsSuccess = modsOutcome != null && modsOutcome.isSuccess();
+        boolean configSuccess = !configAttempted || (configOutcome != null && configOutcome.isSuccess());
+        boolean modsChanged = modsOutcome != null && modsOutcome.hasChanges();
+        boolean configChanged = configAttempted && configOutcome != null && configOutcome.hasChanges();
+
+        String title = failedEarly ? "Update failed" : "Update complete";
+
+        if (modsSuccess) {
+            lines.add(buildUpdateMessage("Mods", modsOutcome.getDiff()));
+        } else {
+            lines.add("Mods update failed for " + updateBaseUrl + ". Check logs for details.");
+            title = "Update failed";
+        }
+
+        if (configAttempted) {
+            if (configSuccess) {
+                lines.add(buildUpdateMessage("Config", configOutcome.getDiff()));
+            } else {
+                lines.add("Config update failed for " + updateBaseUrl + ". Check logs for details.");
+                title = "Update failed";
+            }
+        } else {
+            lines.add("Config updates disabled.");
+        }
+
+        if (modsChanged) {
+            lines.add("Mods were updated. Please restart the game to apply them.");
+        } else if (!modsChanged && !configChanged && !failedEarly && modsSuccess && configSuccess) {
+            lines.add("No updates found.");
+        }
+
+        return new UpdateSummary(title, lines);
     }
 
-    private static void sendPlayerMessage(String message) {
-        if (Minecraft.getInstance().player != null) {
-            Minecraft.getInstance().player.sendSystemMessage(Component.literal(message));
+    private static String buildUpdateMessage(String label, Checksum.ChecksumDiff diff) {
+        if (diff == null || diff.isEmpty()) {
+            return label + ": no changes.";
         }
+
+        String summary = label + " updated (added " + diff.getAdded().size()
+                + ", modified " + diff.getModified().size()
+                + ", removed " + diff.getRemoved().size()
+                + ").";
+
+        String details = buildChangeDetails(diff);
+        return details.isEmpty() ? summary : summary + " " + details;
+    }
+
+    private static String buildChangeDetails(Checksum.ChecksumDiff diff) {
+        List<String> sections = new ArrayList<>();
+
+        String added = formatChangeSection("Added", diff.getAdded());
+        if (!added.isEmpty()) {
+            sections.add(added);
+        }
+
+        String modified = formatChangeSection("Modified", diff.getModified());
+        if (!modified.isEmpty()) {
+            sections.add(modified);
+        }
+
+        String removed = formatChangeSection("Removed", diff.getRemoved());
+        if (!removed.isEmpty()) {
+            sections.add(removed);
+        }
+
+        return sections.isEmpty() ? "" : String.join(" | ", sections);
+    }
+
+    private static String formatChangeSection(String label, List<String> items) {
+        if (items.isEmpty()) {
+            return "";
+        }
+
+        int showCount = Math.min(items.size(), MAX_CHANGE_LIST_ITEMS);
+        List<String> shown = items.subList(0, showCount);
+        String text = label + ": " + String.join(", ", shown);
+
+        if (items.size() > showCount) {
+            text += " (+" + (items.size() - showCount) + " more)";
+        }
+
+        return text;
+    }
+
+    private static void sendPlayerMessages(Minecraft minecraft, List<String> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+        minecraft.execute(() -> {
+            if (minecraft.player == null) {
+                return;
+            }
+            for (String message : messages) {
+                minecraft.player.sendSystemMessage(Component.literal(message));
+            }
+        });
+    }
+
+    private static void updateProcessing(
+            DownloadProgressScreen progressScreen,
+            String title,
+            String detail,
+            int progress,
+            boolean hasProgress
+    ) {
+        if (progressScreen == null) {
+            return;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft == null) {
+            return;
+        }
+        minecraft.execute(() -> progressScreen.updateProcessing(title, detail, progress, hasProgress));
     }
 }
