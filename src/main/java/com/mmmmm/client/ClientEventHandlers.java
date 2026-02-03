@@ -24,11 +24,23 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import com.moandjiezana.toml.Toml;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 
 @EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class ClientEventHandlers {
@@ -95,7 +107,8 @@ public class ClientEventHandlers {
         DownloadProgressScreen progressScreen = new DownloadProgressScreen("mods", modsUrl);
         minecraft.setScreen(progressScreen);
 
-        Executors.newSingleThreadExecutor().execute(() -> {
+        var executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
             boolean modsUpdated = false;
             boolean configUpdated = false;
             boolean cancelled = false;
@@ -110,7 +123,8 @@ public class ClientEventHandlers {
                         "mods",
                         MOD_DOWNLOAD_PATH,
                         MOD_UNZIP_DESTINATION,
-                        MOD_CHECKSUM_FILE
+                        MOD_CHECKSUM_FILE,
+                        true
                 );
 
                 if (!modsUpdated) {
@@ -132,7 +146,8 @@ public class ClientEventHandlers {
                                     "config",
                                     CONFIG_DOWNLOAD_PATH,
                                     CONFIG_UNZIP_DESTINATION,
-                                    CONFIG_CHECKSUM_FILE
+                                    CONFIG_CHECKSUM_FILE,
+                                    false
                             );
                             if (!configUpdated) {
                                 cancelled = progressScreen.isCancelled();
@@ -149,7 +164,7 @@ public class ClientEventHandlers {
                 return;
             } finally {
                 minecraft.execute(() -> minecraft.setScreen(titleScreen));
-                Executors.newSingleThreadExecutor().shutdown();
+                executor.shutdown();
             }
 
             if (cancelled) {
@@ -206,7 +221,8 @@ public class ClientEventHandlers {
             String displayName,
             Path downloadPath,
             Path unzipDestination,
-            Path checksumFile
+            Path checksumFile,
+            boolean syncModsById
     ) throws Exception {
         minecraft.execute(() -> progressScreen.startNewDownload(displayName, downloadUrl));
 
@@ -221,8 +237,13 @@ public class ClientEventHandlers {
         minecraft.execute(() -> progressScreen.startExtraction("Extracting " + displayName + "..."));
         validateDownloadedFile(downloadPath, displayName);
         prepareDestinationDirectory(unzipDestination);
+        if (syncModsById) {
+            LOGGER.info("Using modId sync extraction for {}", displayName);
+            extractModsZipFileWithModIdSync(downloadPath, unzipDestination);
+        } else {
+            extractZipFile(downloadPath, unzipDestination);
+        }
         compareChecksumsIfExists(unzipDestination, checksumFile);
-        extractZipFile(downloadPath, unzipDestination);
         saveUpdatedChecksums(unzipDestination, checksumFile);
         return true;
     }
@@ -318,6 +339,9 @@ public class ClientEventHandlers {
             ZipEntry entry;
             while ((entry = zipInputStream.getNextEntry()) != null) {
                 Path entryPath = destination.resolve(entry.getName()).normalize();
+                if (!entryPath.startsWith(destination)) {
+                    throw new IOException("Blocked zip entry outside destination: " + entry.getName());
+                }
                 if (entry.isDirectory()) {
                     Files.createDirectories(entryPath);
                 } else {
@@ -327,6 +351,161 @@ public class ClientEventHandlers {
                 zipInputStream.closeEntry();
             }
         }
+    }
+
+    private static void extractModsZipFileWithModIdSync(Path zipPath, Path destination) throws Exception {
+        Map<String, List<Path>> existingModsById = indexInstalledModsById(destination);
+        LOGGER.info("Indexed {} modIds in {}", existingModsById.size(), destination);
+
+        try (ZipFile zipFile = new ZipFile(zipPath.toFile())) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                String entryName = entry.getName();
+                Path entryPath = destination.resolve(entryName).normalize();
+                if (!entryPath.startsWith(destination)) {
+                    throw new IOException("Blocked zip entry outside destination: " + entryName);
+                }
+
+                if (entry.isDirectory()) {
+                    Files.createDirectories(entryPath);
+                    continue;
+                }
+
+                Files.createDirectories(entryPath.getParent());
+
+                boolean isJar = entryName.toLowerCase().endsWith(".jar");
+                if (isJar) {
+                    byte[] jarBytes;
+                    try (InputStream is = zipFile.getInputStream(entry)) {
+                        jarBytes = is.readAllBytes();
+                    }
+
+                    try {
+                        Set<String> modIds = getModIdsFromJarBytes(jarBytes);
+                        if (modIds.isEmpty()) {
+                            LOGGER.warn("Could not identify modId for {} - extracting without duplicate cleanup.", entryName);
+                        } else {
+                            LOGGER.info("Zip entry {} has modId(s): {}", entryName, String.join(", ", modIds));
+                            for (String modId : modIds) {
+                                if (modId == null || modId.isBlank()) {
+                                    continue;
+                                }
+                                // Remove any installed jar with the same modId (including jars extracted earlier in this run),
+                                // except the current target file name.
+                                List<Path> installed = existingModsById.getOrDefault(modId, Collections.emptyList());
+                                for (Path installedJar : installed) {
+                                    if (installedJar.equals(entryPath)) {
+                                        continue;
+                                    }
+                                    try {
+                                        if (Files.deleteIfExists(installedJar)) {
+                                            LOGGER.info("Removed old mod jar for modId {}: {}", modId, installedJar.getFileName());
+                                        }
+                                    } catch (Exception e) {
+                                        LOGGER.warn("Failed to remove old mod jar {} for modId {}", installedJar, modId, e);
+                                    }
+                                }
+
+                                // Track the jar we're about to write so later duplicates (if any) can replace it.
+                                existingModsById.put(modId, new ArrayList<>(List.of(entryPath)));
+                            }
+                        }
+                    } catch (Exception e) {
+                        LOGGER.warn("Failed to identify modId for {} - extracting without duplicate cleanup.", entryName, e);
+                    }
+
+                    Files.write(entryPath, jarBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                } else {
+                    try (InputStream is = zipFile.getInputStream(entry)) {
+                        Files.copy(is, entryPath, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
+        }
+    }
+
+    private static Map<String, List<Path>> indexInstalledModsById(Path modsDirectory) {
+        Map<String, List<Path>> byId = new HashMap<>();
+        if (!Files.exists(modsDirectory)) {
+            return byId;
+        }
+
+        try (var stream = Files.walk(modsDirectory)) {
+            stream.filter(path -> Files.isRegularFile(path) && path.toString().toLowerCase().endsWith(".jar"))
+                    .forEach(jarPath -> {
+                        try {
+                            Set<String> modIds = getModIdsFromJarFile(jarPath);
+                            for (String modId : modIds) {
+                                if (modId == null || modId.isBlank()) {
+                                    continue;
+                                }
+                                byId.computeIfAbsent(modId, k -> new ArrayList<>()).add(jarPath);
+                            }
+                        } catch (Exception e) {
+                            LOGGER.debug("Failed to read modId from installed jar: {}", jarPath, e);
+                        }
+                    });
+        } catch (Exception e) {
+            LOGGER.warn("Failed to index installed mods in {}", modsDirectory, e);
+        }
+
+        return byId;
+    }
+
+    private static Set<String> getModIdsFromJarFile(Path jarPath) throws Exception {
+        try (ZipFile zipFile = new ZipFile(jarPath.toFile())) {
+            ZipEntry entry = zipFile.getEntry("META-INF/neoforge.mods.toml");
+            if (entry == null) {
+                entry = zipFile.getEntry("META-INF/mods.toml");
+            }
+            if (entry == null) {
+                return Collections.emptySet();
+            }
+
+            try (InputStream is = zipFile.getInputStream(entry)) {
+                Toml toml = new Toml().read(is);
+                return extractModIdsFromToml(toml);
+            }
+        }
+    }
+
+    private static Set<String> getModIdsFromJarBytes(byte[] jarBytes) throws Exception {
+        try (ZipInputStream jarZip = new ZipInputStream(new ByteArrayInputStream(jarBytes))) {
+            ZipEntry jarEntry;
+            while ((jarEntry = jarZip.getNextEntry()) != null) {
+                String name = jarEntry.getName();
+                if (!jarEntry.isDirectory()
+                        && ("META-INF/neoforge.mods.toml".equals(name) || "META-INF/mods.toml".equals(name))) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    jarZip.transferTo(baos);
+                    Toml toml = new Toml().read(new ByteArrayInputStream(baos.toByteArray()));
+                    return extractModIdsFromToml(toml);
+                }
+                jarZip.closeEntry();
+            }
+        }
+        return Collections.emptySet();
+    }
+
+    private static Set<String> extractModIdsFromToml(Toml toml) {
+        if (toml == null) {
+            return Collections.emptySet();
+        }
+
+        Set<String> modIds = new HashSet<>();
+        List<Toml> modsTables = toml.getTables("mods");
+        if (modsTables != null) {
+            for (Toml modTable : modsTables) {
+                String modId = modTable.getString("modId");
+                if (modId != null && !modId.isBlank()) {
+                    modIds.add(modId.toLowerCase(Locale.ROOT));
+                }
+            }
+        }
+
+        return modIds;
     }
 
     private static void saveUpdatedChecksums(Path targetDirectory, Path checksumFile) throws Exception {

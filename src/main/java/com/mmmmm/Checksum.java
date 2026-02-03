@@ -8,11 +8,15 @@ import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utility class for computing file checksums.
  */
 public class Checksum {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Checksum.class);
 
     /**
      * Computes the SHA-256 checksum of a file.
@@ -66,15 +70,15 @@ public class Checksum {
         // Compare checksums
         for (String mod : newChecksums.keySet()) {
             if (!oldChecksums.containsKey(mod)) {
-                System.out.println("Added: " + mod);
+                LOGGER.info("Checksum diff (since last snapshot) - Added: {}", mod);
             } else if (!newChecksums.get(mod).equals(oldChecksums.get(mod))) {
-                System.out.println("Modified: " + mod);
+                LOGGER.info("Checksum diff (since last snapshot) - Modified: {}", mod);
             }
         }
 
         for (String mod : oldChecksums.keySet()) {
             if (!newChecksums.containsKey(mod)) {
-                System.out.println("Removed: " + mod);
+                LOGGER.info("Checksum diff (since last snapshot) - Removed: {}", mod);
             }
         }
     }
