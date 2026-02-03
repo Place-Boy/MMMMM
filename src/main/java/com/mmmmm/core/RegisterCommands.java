@@ -1,4 +1,4 @@
-package com.mmmmm;
+package com.mmmmm.core;
 
 import com.google.gson.JsonParser;
 import com.moandjiezana.toml.Toml;

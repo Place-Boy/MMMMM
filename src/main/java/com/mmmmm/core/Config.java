@@ -1,4 +1,4 @@
-package com.mmmmm;
+package com.mmmmm.core;
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.api.distmarker.Dist;

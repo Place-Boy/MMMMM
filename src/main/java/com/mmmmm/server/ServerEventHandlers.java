@@ -1,6 +1,6 @@
 package com.mmmmm.server;
 
-import com.mmmmm.MMMMM;
+import com.mmmmm.core.MMMMM;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.bus.api.SubscribeEvent;

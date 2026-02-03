@@ -1,8 +1,8 @@
 package com.mmmmm.client;
 
-import com.mmmmm.Checksum;
-import com.mmmmm.Config;
-import com.mmmmm.MMMMM;
+import com.mmmmm.core.Checksum;
+import com.mmmmm.core.Config;
+import com.mmmmm.core.MMMMM;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipEntry;
@@ -86,101 +87,120 @@ public class ClientEventHandlers {
         return Button.builder(
                 Component.literal("Update"),
                 (btn) -> {
-                    String serverUpdateIP = ServerMetadata.getMetadata(server.ip); // Retrieve custom data (e.g., URL or IP)
-                    LOGGER.info("Update button clicked for server: {}", serverUpdateIP);
-                    downloadAndProcessMod(serverUpdateIP); // Pass the correct metadata
+                    String updateBaseUrl = ServerMetadata.getMetadata(server.ip); // IP or full URL
+                    LOGGER.info("Update button clicked for server: {}", updateBaseUrl);
+                    runUpdateForServer(updateBaseUrl);
                 }
         ).bounds(x, y, 50, 20).build();
     }
 
-    private static void downloadAndProcessMod(String serverUpdateIP) {
+    private static void runUpdateForServer(String updateBaseUrl) {
         Minecraft minecraft = Minecraft.getInstance();
         TitleScreen titleScreen = new TitleScreen();
 
-        String modsUrl = buildDownloadUrl(serverUpdateIP, MOD_ZIP_NAME);
+        String modsUrl = buildDownloadUrl(updateBaseUrl, MOD_ZIP_NAME);
         if (modsUrl == null) {
-            LOGGER.info("No mod URL found for {}", serverUpdateIP);
+            LOGGER.info("No mod URL found for {}", updateBaseUrl);
             return;
         }
 
         DownloadProgressScreen progressScreen = new DownloadProgressScreen("mods", modsUrl);
         minecraft.setScreen(progressScreen);
 
-        var executor = Executors.newSingleThreadExecutor();
-        executor.execute(() -> {
-            boolean modsUpdated = false;
-            boolean configUpdated = false;
-            boolean cancelled = false;
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> performUpdateFlow(updateBaseUrl, modsUrl, minecraft, titleScreen, progressScreen, executor));
+    }
 
-            try {
-                LOGGER.info("Starting mod download from: {}", modsUrl);
+    private static void performUpdateFlow(
+            String updateBaseUrl,
+            String modsUrl,
+            Minecraft minecraft,
+            TitleScreen titleScreen,
+            DownloadProgressScreen progressScreen,
+            ExecutorService executor
+    ) {
+        boolean modsUpdated = false;
+        boolean configUpdated = !Config.updateConfig;
+        boolean cancelled = false;
 
-                modsUpdated = downloadAndProcessZip(
-                        minecraft,
-                        progressScreen,
-                        modsUrl,
-                        "mods",
-                        MOD_DOWNLOAD_PATH,
-                        MOD_UNZIP_DESTINATION,
-                        MOD_CHECKSUM_FILE,
-                        true
-                );
+        try {
+            LOGGER.info("Starting mod download from: {}", modsUrl);
 
-                if (!modsUpdated) {
-                    cancelled = progressScreen.isCancelled();
-                    return;
-                }
+            modsUpdated = downloadAndApplyZipUpdate(
+                    minecraft,
+                    progressScreen,
+                    modsUrl,
+                    "mods",
+                    MOD_DOWNLOAD_PATH,
+                    MOD_UNZIP_DESTINATION,
+                    MOD_CHECKSUM_FILE,
+                    true
+            );
 
-                if (Config.updateConfig) {
-                    String configUrl = buildDownloadUrl(serverUpdateIP, CONFIG_ZIP_NAME);
-                    if (configUrl == null) {
-                        LOGGER.warn("Config update enabled but no config URL found for {}", serverUpdateIP);
-                    } else {
-                        LOGGER.info("Starting config download from: {}", configUrl);
-                        try {
-                            configUpdated = downloadAndProcessZip(
-                                    minecraft,
-                                    progressScreen,
-                                    configUrl,
-                                    "config",
-                                    CONFIG_DOWNLOAD_PATH,
-                                    CONFIG_UNZIP_DESTINATION,
-                                    CONFIG_CHECKSUM_FILE,
-                                    false
-                            );
-                            if (!configUpdated) {
-                                cancelled = progressScreen.isCancelled();
-                                return;
-                            }
-                        } catch (Exception e) {
-                            LOGGER.error("Failed to download or extract config", e);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.error("Failed to download or extract mods", e);
-                sendPlayerMessage("Failed to download or extract mods for " + serverUpdateIP + ". Check logs for more details.");
-                return;
-            } finally {
-                minecraft.execute(() -> minecraft.setScreen(titleScreen));
-                executor.shutdown();
-            }
-
-            if (cancelled) {
-                sendPlayerMessage("Update cancelled.");
+            if (!modsUpdated) {
+                cancelled = progressScreen.isCancelled();
                 return;
             }
 
             if (Config.updateConfig) {
-                if (configUpdated) {
-                    sendPlayerMessage("Mods and config downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
-                } else {
-                    sendPlayerMessage("Mods updated for " + serverUpdateIP + ", but config update failed. Check logs for more details.");
+                configUpdated = downloadConfigUpdate(updateBaseUrl, minecraft, progressScreen);
+                if (!configUpdated) {
+                    cancelled = progressScreen.isCancelled();
+                    return;
                 }
-            } else {
-                sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + serverUpdateIP + "!");
             }
-        });
+        } catch (Exception e) {
+            LOGGER.error("Failed to download or extract mods", e);
+            sendPlayerMessage("Failed to download or extract mods for " + updateBaseUrl + ". Check logs for more details.");
+            return;
+        } finally {
+            minecraft.execute(() -> minecraft.setScreen(titleScreen));
+            executor.shutdown();
+        }
+
+        if (cancelled) {
+            sendPlayerMessage("Update cancelled.");
+            return;
+        }
+
+        if (Config.updateConfig) {
+            if (configUpdated) {
+                sendPlayerMessage("Mods and config downloaded, verified, and extracted successfully for " + updateBaseUrl + "!");
+            } else {
+                sendPlayerMessage("Mods updated for " + updateBaseUrl + ", but config update failed. Check logs for more details.");
+            }
+        } else {
+            sendPlayerMessage("Mods downloaded, verified, and extracted successfully for " + updateBaseUrl + "!");
+        }
+    }
+
+    private static boolean downloadConfigUpdate(
+            String updateBaseUrl,
+            Minecraft minecraft,
+            DownloadProgressScreen progressScreen
+    ) {
+        String configUrl = buildDownloadUrl(updateBaseUrl, CONFIG_ZIP_NAME);
+        if (configUrl == null) {
+            LOGGER.warn("Config update enabled but no config URL found for {}", updateBaseUrl);
+            return false;
+        }
+
+        LOGGER.info("Starting config download from: {}", configUrl);
+        try {
+            return downloadAndApplyZipUpdate(
+                    minecraft,
+                    progressScreen,
+                    configUrl,
+                    "config",
+                    CONFIG_DOWNLOAD_PATH,
+                    CONFIG_UNZIP_DESTINATION,
+                    CONFIG_CHECKSUM_FILE,
+                    false
+            );
+        } catch (Exception e) {
+            LOGGER.error("Failed to download or extract config", e);
+            return false;
+        }
     }
 
     private static String buildDownloadUrl(String serverUpdateIP, String zipFileName) {
@@ -213,7 +233,7 @@ public class ClientEventHandlers {
         return baseUrl + expectedSuffix;
     }
 
-    private static boolean downloadAndProcessZip(
+    private static boolean downloadAndApplyZipUpdate(
             Minecraft minecraft,
             DownloadProgressScreen progressScreen,
             String downloadUrl,

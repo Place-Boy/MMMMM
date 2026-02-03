@@ -1,7 +1,7 @@
 package com.mmmmm.server;
 
-import com.mmmmm.Config;
-import com.mmmmm.MMMMM;
+import com.mmmmm.core.Config;
+import com.mmmmm.core.MMMMM;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;

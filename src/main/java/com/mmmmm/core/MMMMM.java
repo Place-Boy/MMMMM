@@ -1,4 +1,4 @@
-package com.mmmmm;
+package com.mmmmm.core;
 
 import com.mojang.logging.LogUtils;
 import net.neoforged.fml.ModContainer;

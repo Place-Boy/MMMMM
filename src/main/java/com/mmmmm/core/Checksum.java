@@ -1,4 +1,4 @@
-package com.mmmmm;
+package com.mmmmm.core;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -34,9 +34,9 @@ public class Checksum {
         return HexFormat.of().formatHex(hashBytes);
     }
 
-    public static void saveChecksums(Path modsDirectory, Path checksumFile) throws Exception {
+    public static void saveChecksums(Path targetDirectory, Path checksumFile) throws Exception {
         Map<String, String> checksums;
-        try (var stream = Files.list(modsDirectory)) {
+        try (var stream = Files.list(targetDirectory)) {
             checksums = stream
                     .filter(Files::isRegularFile)
                     .collect(Collectors.toMap(
@@ -54,7 +54,7 @@ public class Checksum {
         Files.writeString(checksumFile, new Gson().toJson(checksums));
     }
 
-    public static void compareChecksums(Path modsDirectory, Path checksumFile) throws Exception {
+    public static void compareChecksums(Path targetDirectory, Path checksumFile) throws Exception {
         // Load previous checksums
         Type type = new TypeToken<Map<String, String>>() {}.getType();
         Map<String, String> oldChecksums = new Gson().fromJson(Files.readString(checksumFile), type);
@@ -64,7 +64,7 @@ public class Checksum {
 
         // Compute new checksums
         Map<String, String> newChecksums;
-        try (var stream = Files.list(modsDirectory)) {
+        try (var stream = Files.list(targetDirectory)) {
             newChecksums = stream
                     .filter(Files::isRegularFile)
                     .collect(Collectors.toMap(
