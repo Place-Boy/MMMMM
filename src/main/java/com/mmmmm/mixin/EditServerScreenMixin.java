@@ -3,6 +3,7 @@ package com.mmmmm.mixin;
 import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.EditServerScreen;
 import net.minecraft.network.chat.Component;
@@ -40,8 +41,8 @@ public abstract class EditServerScreenMixin {
                 });
 
         screen.children().stream()
-                .filter(c -> c instanceof net.minecraft.client.gui.components.CycleButton)
-                .map(c -> (net.minecraft.client.gui.components.CycleButton) c)
+                .filter(c -> c instanceof CycleButton<?>)
+                .map(c -> (CycleButton<?>) c)
                 .filter(button -> button.getMessage().getString().contains("Resource"))
                 .forEach(button -> button.setY(button.getY() + 18));
 

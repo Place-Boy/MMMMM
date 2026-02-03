@@ -1,10 +1,12 @@
 package com.mmmmm;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.nio.file.Path;
 import java.nio.file.Files;
 import java.security.MessageDigest;
+import java.lang.reflect.Type;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -51,7 +53,8 @@ public class Checksum {
 
     public static void compareChecksums(Path modsDirectory, Path checksumFile) throws Exception {
         // Load previous checksums
-        Map<String, String> oldChecksums = new Gson().fromJson(Files.readString(checksumFile), Map.class);
+        Type type = new TypeToken<Map<String, String>>() {}.getType();
+        Map<String, String> oldChecksums = new Gson().fromJson(Files.readString(checksumFile), type);
 
         // Compute new checksums
         Map<String, String> newChecksums = Files.list(modsDirectory)

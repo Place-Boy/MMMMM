@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -249,7 +250,12 @@ public class ClientEventHandlers {
     }
 
     private static HttpURLConnection initializeConnection(String url, String displayName) throws IOException {
-        URL downloadUrl = new URL(url);
+        URL downloadUrl;
+        try {
+            downloadUrl = URI.create(url).toURL();
+        } catch (IllegalArgumentException e) {
+            throw new IOException("Invalid URL: " + url, e);
+        }
         HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
         connection.setConnectTimeout(CONNECTION_TIMEOUT_MS);
         connection.setReadTimeout(CONNECTION_TIMEOUT_MS);
