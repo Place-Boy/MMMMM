@@ -56,7 +56,6 @@ public class ClientEventHandlers {
     private static final Path CONFIG_UNZIP_DESTINATION = Path.of("config");
     private static final Path CONFIG_CHECKSUM_FILE = Path.of("MMMMM/config_checksums.json");
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
-    private static final List<Button> serverButtons = new ArrayList<>();
 
     @SubscribeEvent
     public static void onMultiplayerScreenInit(Post event) {
@@ -80,7 +79,6 @@ public class ClientEventHandlers {
             ServerData server = serverList.get(i);
             Button serverButton = createServerButton(buttonX, yOffset, server);
             event.addListener(serverButton);
-            serverButtons.add(serverButton);
         }
     }
 
@@ -279,11 +277,13 @@ public class ClientEventHandlers {
         try (InputStream in = connection.getInputStream();
              var out = Files.newOutputStream(destination)) {
             long totalBytes = connection.getContentLengthLong();
+            boolean hasLength = totalBytes > 0;
             long downloadedBytes = 0;
             long startTime = System.currentTimeMillis();
 
             byte[] buffer = new byte[8192];
             int bytesRead;
+            String lastSpeed = "0 KB/s";
 
             while ((bytesRead = in.read(buffer)) != -1) {
                 if (progressScreen.isCancelled()) {
@@ -294,27 +294,36 @@ public class ClientEventHandlers {
                 out.write(buffer, 0, bytesRead);
                 downloadedBytes += bytesRead;
 
-                int progress = (int) ((downloadedBytes * 100) / totalBytes);
+                int progress = hasLength ? (int) ((downloadedBytes * 100) / totalBytes) : 0;
                 long elapsedTime = System.currentTimeMillis() - startTime;
                 double speedInKB = elapsedTime > 0 ? (downloadedBytes / 1024.0) / (elapsedTime / 1000.0) : 0.0;
 
                 String speed = speedInKB >= 1024
                         ? String.format("%.2f MB/s", speedInKB / 1024)
                         : String.format("%.2f KB/s", speedInKB);
+                lastSpeed = speed;
 
                 // Calculate ETA
                 long bytesRemaining = totalBytes - downloadedBytes;
-                double secondsRemaining = (speedInKB > 0) ? (bytesRemaining / 1024.0) / speedInKB : 0.0;
                 String eta;
-                if (secondsRemaining > 0) {
-                    int minutes = (int) (secondsRemaining / 60);
-                    int seconds = (int) (secondsRemaining % 60);
-                    eta = String.format("%dm %ds", minutes, seconds);
+                if (!hasLength) {
+                    eta = "Unknown";
                 } else {
-                    eta = "Calculating...";
+                    double secondsRemaining = (speedInKB > 0) ? (bytesRemaining / 1024.0) / speedInKB : 0.0;
+                    if (secondsRemaining > 0) {
+                        int minutes = (int) (secondsRemaining / 60);
+                        int seconds = (int) (secondsRemaining % 60);
+                        eta = String.format("%dm %ds", minutes, seconds);
+                    } else {
+                        eta = "Calculating...";
+                    }
                 }
 
                 progressScreen.updateProgress(progress, speed, eta);
+            }
+
+            if (!hasLength) {
+                progressScreen.updateProgress(100, lastSpeed, "");
             }
         }
     }

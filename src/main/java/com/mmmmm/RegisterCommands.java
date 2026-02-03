@@ -85,9 +85,12 @@ public class RegisterCommands {
 
             try {
                 // Get list of .jar mods
-                List<Path> modFiles = Files.walk(modsFolder)
-                        .filter(p -> Files.isRegularFile(p) && p.toString().endsWith(".jar"))
-                        .collect(Collectors.toList());
+                List<Path> modFiles;
+                try (var stream = Files.walk(modsFolder)) {
+                    modFiles = stream
+                            .filter(p -> Files.isRegularFile(p) && p.toString().endsWith(".jar"))
+                            .collect(Collectors.toList());
+                }
 
                 if (modFiles.isEmpty()) {
                     LOGGER.warn("No .jar files found in mods folder, skipping zip.");
@@ -177,9 +180,12 @@ public class RegisterCommands {
                     return;
                 }
 
-                List<Path> configFiles = Files.walk(configFolder)
-                        .filter(Files::isRegularFile)
-                        .collect(Collectors.toList());
+                List<Path> configFiles;
+                try (var stream = Files.walk(configFolder)) {
+                    configFiles = stream
+                            .filter(Files::isRegularFile)
+                            .collect(Collectors.toList());
+                }
 
                 if (configFiles.isEmpty()) {
                     LOGGER.warn("No files found in config folder, skipping zip.");

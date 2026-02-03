@@ -10,12 +10,12 @@ public class DownloadProgressScreen extends Screen {
 
     private volatile String downloadSource; // Use the correct download source
     private volatile String downloadLabel; // Current download label (mods/config)
-    private int progress = 0; // Progress percentage (0-100)
-    private String downloadSpeed = "0 KB/s"; // Download speed
-    private String estimatedTimeRemaining = ""; // Estimated time remaining
+    private volatile int progress = 0; // Progress percentage (0-100)
+    private volatile String downloadSpeed = "0 KB/s"; // Download speed
+    private volatile String estimatedTimeRemaining = ""; // Estimated time remaining
     private Button cancelButton; // Cancel button
-    private boolean isExtracting = false; // Indicates if extraction is in progress
-    private String extractionMessage = ""; // Message shown during extraction
+    private volatile boolean isExtracting = false; // Indicates if extraction is in progress
+    private volatile String extractionMessage = ""; // Message shown during extraction
 
 
     public DownloadProgressScreen(String downloadLabel, String downloadSource) {

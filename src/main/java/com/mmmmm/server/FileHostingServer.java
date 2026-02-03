@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
@@ -15,20 +16,27 @@ import java.util.concurrent.Executors;
 public class FileHostingServer {
 
     private static HttpServer fileHostingServer;
-    public static final int FILE_SERVER_PORT = Config.fileServerPort;
+    private static ExecutorService fileExecutor;
+    private static volatile int activePort = -1;
     public static final Path FILE_DIRECTORY = Path.of("MMMMM/shared-files");
 
     /**
      * Starts the file hosting server on a separate thread.
      */
     public static void start() throws IOException {
+        if (fileHostingServer != null) {
+            return;
+        }
+
+        int port = Config.fileServerPort;
         // Create the shared-files directory if it does not exist
         if (!Files.exists(FILE_DIRECTORY)) {
             Files.createDirectories(FILE_DIRECTORY);
         }
 
         // Create and configure the HTTP server
-        fileHostingServer = HttpServer.create(new InetSocketAddress(FILE_SERVER_PORT), 0);
+        fileHostingServer = HttpServer.create(new InetSocketAddress(port), 0);
+        activePort = port;
 
         fileHostingServer.createContext("/", exchange -> {
             try {
@@ -74,11 +82,12 @@ public class FileHostingServer {
             }
         });
 
-        fileHostingServer.setExecutor(Executors.newCachedThreadPool()); // Enable concurrent downloads
+        fileExecutor = Executors.newCachedThreadPool(); // Enable concurrent downloads
+        fileHostingServer.setExecutor(fileExecutor);
         // Start the server on a separate thread
         new Thread(() -> {
             fileHostingServer.start();
-            MMMMM.LOGGER.info("File hosting server started on port " + FILE_SERVER_PORT);
+            MMMMM.LOGGER.info("File hosting server started on port " + activePort);
         }).start();
     }
 
@@ -89,6 +98,26 @@ public class FileHostingServer {
         if (fileHostingServer != null) {
             fileHostingServer.stop(0);
             MMMMM.LOGGER.info("File hosting server stopped.");
+            fileHostingServer = null;
+            activePort = -1;
+        }
+        if (fileExecutor != null) {
+            fileExecutor.shutdown();
+            fileExecutor = null;
+        }
+    }
+
+    public static synchronized void restartIfPortChanged() throws IOException {
+        int desiredPort = Config.fileServerPort;
+        if (fileHostingServer == null) {
+            start();
+            return;
+        }
+
+        if (desiredPort != activePort) {
+            MMMMM.LOGGER.info("File server port changed ({} -> {}). Restarting.", activePort, desiredPort);
+            stop();
+            start();
         }
     }
 }

@@ -35,18 +35,21 @@ public class Checksum {
     }
 
     public static void saveChecksums(Path modsDirectory, Path checksumFile) throws Exception {
-        Map<String, String> checksums = Files.list(modsDirectory)
-                .filter(Files::isRegularFile)
-                .collect(Collectors.toMap(
-                        path -> path.getFileName().toString(),
-                        path -> {
-                            try {
-                                return computeChecksum(path);
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
+        Map<String, String> checksums;
+        try (var stream = Files.list(modsDirectory)) {
+            checksums = stream
+                    .filter(Files::isRegularFile)
+                    .collect(Collectors.toMap(
+                            path -> path.getFileName().toString(),
+                            path -> {
+                                try {
+                                    return computeChecksum(path);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
                             }
-                        }
-                ));
+                    ));
+        }
 
         Files.writeString(checksumFile, new Gson().toJson(checksums));
     }
@@ -55,20 +58,26 @@ public class Checksum {
         // Load previous checksums
         Type type = new TypeToken<Map<String, String>>() {}.getType();
         Map<String, String> oldChecksums = new Gson().fromJson(Files.readString(checksumFile), type);
+        if (oldChecksums == null) {
+            oldChecksums = Map.of();
+        }
 
         // Compute new checksums
-        Map<String, String> newChecksums = Files.list(modsDirectory)
-                .filter(Files::isRegularFile)
-                .collect(Collectors.toMap(
-                        path -> path.getFileName().toString(),
-                        path -> {
-                            try {
-                                return computeChecksum(path);
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
+        Map<String, String> newChecksums;
+        try (var stream = Files.list(modsDirectory)) {
+            newChecksums = stream
+                    .filter(Files::isRegularFile)
+                    .collect(Collectors.toMap(
+                            path -> path.getFileName().toString(),
+                            path -> {
+                                try {
+                                    return computeChecksum(path);
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
                             }
-                        }
-                ));
+                    ));
+        }
 
         // Compare checksums
         for (String mod : newChecksums.keySet()) {

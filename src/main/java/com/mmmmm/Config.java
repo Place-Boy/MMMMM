@@ -1,8 +1,10 @@
 package com.mmmmm;
 
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.config.ModConfigEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
@@ -33,7 +35,7 @@ public class Config {
             .comment(
                     "If true, the client will also update the config folder when pressing the update button.",
                     "This downloads config.zip from the server and extracts it into /config.",
-                    "Default: false"
+                    "Default: true"
             )
             .define("updateConfig", true);
 
@@ -67,5 +69,13 @@ public class Config {
         MMMMM.LOGGER.info("File Server Port: {}", fileServerPort);
         MMMMM.LOGGER.info("Filter Server Mods: {}", filterServerSideMods);
         MMMMM.LOGGER.info("Update Config: {}", updateConfig);
+
+        if (FMLEnvironment.dist == Dist.DEDICATED_SERVER) {
+            try {
+                com.mmmmm.server.FileHostingServer.restartIfPortChanged();
+            } catch (Exception e) {
+                MMMMM.LOGGER.error("Failed to apply file server config changes.", e);
+            }
+        }
     }
 }
