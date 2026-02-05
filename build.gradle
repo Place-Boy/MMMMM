@@ -32,11 +32,6 @@ neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version
 
-    parchment {
-        mappingsVersion = project.parchment_mappings_version
-        minecraftVersion = project.parchment_minecraft_version
-    }
-
     // This line is optional. Access Transformers are automatically detected
     // accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
 
@@ -124,16 +119,21 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
-    implementation ('net.neoforged:minecraft-dependencies:1.21.8') {
+    implementation ('net.neoforged:minecraft-dependencies:1.21.11') {
         exclude group: 'net.minidev', module: 'json-smart'
     }
-    implementation ('org.spongepowered:mixin:0.8.5'){
+    implementation ('org.spongepowered:mixin:0.8.5') {
         exclude group: 'net.minidev', module: 'json-smart'
     }
-    implementation ('com.moandjiezana.toml:toml4j:0.7.2'){
+    implementation ('com.moandjiezana.toml:toml4j:0.7.2') {
         exclude group: 'net.minidev', module: 'json-smart'
     }
-    implementation ('org.json:json:20231013'){
+    implementation ('org.json:json:20231013') {
+        exclude group: 'net.minidev', module: 'json-smart'
+    }
+
+    // SLF4J API for org.slf4j.Logger / LoggerFactory usage in mod code
+    implementation ('org.slf4j:slf4j-api:2.0.9') {
         exclude group: 'net.minidev', module: 'json-smart'
     }
 }

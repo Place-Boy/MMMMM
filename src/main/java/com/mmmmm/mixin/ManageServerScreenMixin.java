@@ -4,21 +4,26 @@ import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.EditServerScreen;
+import net.minecraft.client.gui.screens.ManageServerScreen;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import static com.mojang.text2speech.Narrator.LOGGER;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Mixin(EditServerScreen.class)
-public abstract class EditServerScreenMixin {
+@Mixin(ManageServerScreen.class)
+public abstract class ManageServerScreenMixin {
 
     @Shadow public abstract void onClose();
+
+    @Unique
+    private static final Logger LOGGER = LoggerFactory.getLogger(ManageServerScreenMixin.class);
 
     private int[] labelYPositions = new int[2]; // 0 = Server Name Y, 1 = Server Address Y
     private EditBox customField;
@@ -26,7 +31,7 @@ public abstract class EditServerScreenMixin {
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
-        EditServerScreen screen = (EditServerScreen) (Object) this;
+        ManageServerScreen screen = (ManageServerScreen) (Object) this;
 
         int[] index = {0};
         screen.children().stream()
@@ -55,7 +60,7 @@ public abstract class EditServerScreenMixin {
         customField.setMaxLength(100);
 
         // Fill the custom field if metadata exists
-        EditServerScreenAccessor accessor = (EditServerScreenAccessor) screen;
+        ManageServerScreenAccessor accessor = (ManageServerScreenAccessor) screen;
         String serverIP = accessor.getServerData().ip;
         String existingMetadata = ServerMetadata.getMetadata(serverIP);
         if (!existingMetadata.isBlank()) {
@@ -70,8 +75,8 @@ public abstract class EditServerScreenMixin {
         LOGGER.info("onSaveCustomField called");
         if (customField != null) {
             String customValue = customField.getValue();
-            EditServerScreen screen = (EditServerScreen) (Object) this;
-            String serverIP = ((EditServerScreenAccessor) screen).getServerData().ip;
+            ManageServerScreen screen = (ManageServerScreen) (Object) this;
+            String serverIP = ((ManageServerScreenAccessor) screen).getServerData().ip;
             ServerMetadata.setMetadata(serverIP, customValue);
         }
     }

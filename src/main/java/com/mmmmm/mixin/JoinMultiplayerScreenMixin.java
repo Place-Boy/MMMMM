@@ -3,7 +3,6 @@ package com.mmmmm.mixin;
 import com.mmmmm.client.ClientEventHandlers;
 import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.multiplayer.ServerData;
@@ -50,18 +49,6 @@ public class JoinMultiplayerScreenMixin {
                 ((ScreenAccessorMixin) screen).invokeAddRenderableWidget(button);
             }
         });
-    }
-
-    @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        JoinMultiplayerScreen screen = (JoinMultiplayerScreen) (Object) this;
-
-        for (Button button : screen.children().stream()
-                .filter(c -> c instanceof Button)
-                .map(c -> (Button) c)
-                .toList()) {
-            button.render(graphics, mouseX, mouseY, delta); // Render buttons on top
-        }
     }
 
     private Button createServerButton(int x, int y, ServerData server) {
