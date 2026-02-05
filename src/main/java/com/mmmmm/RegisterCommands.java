@@ -1,10 +1,10 @@
 package com.mmmmm;
 
 import com.moandjiezana.toml.Toml;
-import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
+import net.minecraft.server.permissions.Permissions;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -20,12 +20,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
+
+import static net.minecraft.commands.Commands.LEVEL_ADMINS;
+import static net.minecraft.commands.Commands.literal;
 
 public class RegisterCommands {
 
@@ -34,21 +36,17 @@ public class RegisterCommands {
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         LOGGER.info("Registering server commands...");
 
-        CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
-
-        dispatcher.register(Commands.literal("mmmmm")
-                .then(Commands.literal("save-mods")
-                        .requires(source -> source.hasPermission(2))
-                        .executes(context -> {
-                            saveModsToZip();
-                            context.getSource().sendSuccess(() -> Component.literal("Mods have been saved to mods.zip in the shared-files directory."), true);
-                            return 1;
-                        })
-                )
+        event.getDispatcher().register(
+                literal("mmmmm")
+                        .then(literal("save-mods")
+                                // Require operator-level permission (level 3: typical admin commands like /ban, /kick)
+                                .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_MODERATOR))
+                                .executes(RegisterCommands::saveModsToZip))
         );
     }
 
-    public static void saveModsToZip() {
+
+    public static int saveModsToZip(CommandContext<CommandSourceStack> context) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             Path modsFolder = Path.of("mods");
@@ -90,6 +88,8 @@ public class RegisterCommands {
                 executor.shutdown();
             }
         });
+
+        return Command.SINGLE_SUCCESS;
     }
 
     private static String getModNameFromJar(Path jarPath) {

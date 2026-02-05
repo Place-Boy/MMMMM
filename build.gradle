@@ -49,6 +49,9 @@ neoForge {
             server()
             //programArgument '--nogui'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+
+            // Force Netty to use pure Java NIO transports and avoid native kqueue/epoll on Windows
+            jvmArgument '-Dio.netty.transport.noNative=true'
         }
 
         // This run config launches GameTestServer and runs all registered gametests, then exits.
@@ -119,12 +122,9 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
-    implementation ('net.neoforged:minecraft-dependencies:1.21.11') {
-        exclude group: 'net.minidev', module: 'json-smart'
-    }
-    implementation ('org.spongepowered:mixin:0.8.5') {
-        exclude group: 'net.minidev', module: 'json-smart'
-    }
+    //implementation ('net.neoforged:minecraft-dependencies:1.21.11') {
+    //    exclude group: 'net.minidev', module: 'json-smart'
+    //}
     implementation ('com.moandjiezana.toml:toml4j:0.7.2') {
         exclude group: 'net.minidev', module: 'json-smart'
     }
