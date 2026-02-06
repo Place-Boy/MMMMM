@@ -1,7 +1,6 @@
 package com.mmmmm.client;
 
 import com.mmmmm.Checksum;
-import com.mmmmm.Config;
 import com.mmmmm.MMMMM;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
@@ -102,34 +101,38 @@ public class ClientEventHandlers {
 
         String baseUrl = normalizeBaseUrl(serverUpdateIP);
 
-        DownloadProgressScreen progressScreen = new DownloadProgressScreen(baseUrl);
-        minecraft.setScreen(progressScreen);
+        DownloadProgressScreen progressScreen = new DownloadProgressScreen(baseUrl, (downloadConfig, downloadKubejs, downloadMods, screen) -> {
+            DOWNLOAD_EXECUTOR.execute(() -> {
+                try {
+                    if (downloadMods) {
+                        LOGGER.info("Starting mods download from base URL: {}", baseUrl);
+                        downloadAndProcessPackage(baseUrl, "mods", MOD_DOWNLOAD_PATH, UNZIP_DESTINATION,
+                                CHECKSUM_FILE, "mods", screen, true);
+                    }
 
-        DOWNLOAD_EXECUTOR.execute(() -> {
-            try {
-                // Mods
-                LOGGER.info("Starting mods download from base URL: {}", baseUrl);
-                downloadAndProcessPackage(baseUrl, "mods", MOD_DOWNLOAD_PATH, UNZIP_DESTINATION,
-                        CHECKSUM_FILE, "mods", progressScreen, true);
+                    if (downloadConfig) {
+                        LOGGER.info("Starting config download (if available) from base URL: {}", baseUrl);
+                        downloadAndProcessPackage(baseUrl, "config", CONFIG_DOWNLOAD_PATH, CONFIG_UNZIP_DESTINATION,
+                                CONFIG_CHECKSUM_FILE, "config", screen, false);
+                    }
 
-                // Config (optional)
-                LOGGER.info("Starting config download (if available) from base URL: {}", baseUrl);
-                downloadAndProcessPackage(baseUrl, "config", CONFIG_DOWNLOAD_PATH, CONFIG_UNZIP_DESTINATION,
-                        CONFIG_CHECKSUM_FILE, "config", progressScreen, false);
+                    if (downloadKubejs) {
+                        LOGGER.info("Starting kubejs download (if available) from base URL: {}", baseUrl);
+                        downloadAndProcessPackage(baseUrl, "kubejs", KUBEJS_DOWNLOAD_PATH, KUBEJS_UNZIP_DESTINATION,
+                                KUBEJS_CHECKSUM_FILE, "kubejs", screen, false);
+                    }
 
-                // KubeJS (optional)
-                LOGGER.info("Starting kubejs download (if available) from base URL: {}", baseUrl);
-                downloadAndProcessPackage(baseUrl, "kubejs", KUBEJS_DOWNLOAD_PATH, KUBEJS_UNZIP_DESTINATION,
-                        KUBEJS_CHECKSUM_FILE, "kubejs", progressScreen, false);
-
-                sendPlayerMessage("Mods, config, and kubejs downloaded, verified, and extracted for " + serverUpdateIP + "!");
-            } catch (Exception e) {
-                LOGGER.error("Failed to download or extract one or more packages", e);
-                sendPlayerMessage("Failed to download or extract required files for " + serverUpdateIP + ". Check logs for more details.");
-            } finally {
-                minecraft.execute(() -> minecraft.setScreen(titleScreen));
-            }
+                    sendPlayerMessage("Selected content downloaded, verified, and extracted for " + serverUpdateIP + "!");
+                } catch (Exception e) {
+                    LOGGER.error("Failed to download or extract one or more packages", e);
+                    sendPlayerMessage("Failed to download or extract required files for " + serverUpdateIP + ". Check logs for more details.");
+                } finally {
+                    minecraft.execute(() -> minecraft.setScreen(titleScreen));
+                }
+            });
         });
+
+        minecraft.setScreen(progressScreen);
     }
 
     private static String normalizeBaseUrl(String serverUpdateIP) {
