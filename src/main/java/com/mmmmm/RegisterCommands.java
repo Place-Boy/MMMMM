@@ -67,8 +67,7 @@ public class RegisterCommands {
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> {
                             saveModsToZip();
-                            saveConfigToZip();
-                            saveKubeJSToZip();
+                            saveAllToZip();
                             context.getSource().sendSuccess(
                                     () -> Component.literal("Zipping mods... check console for progress."),
                                     true
@@ -79,150 +78,48 @@ public class RegisterCommands {
         );
     }
 
-    public static void saveKubeJSToZip() {
+    public static void saveAllToZip(){
         executor.execute(() -> {
-            Path kubeJSFolder = Path.of("kudejs");
-            Path kubeJSZip = Path.of("MMMMM/shared-files/kubejs.zip");
-
-            try {
-                List<Path> kubeJSFiles = Files.walk(kubeJSFolder)
-                        .filter(Files::isRegularFile)
-                        .collect(Collectors.toList());
-
-                if (kubeJSFiles.isEmpty()) {
-                    LOGGER.warn("No config files found, skipping config.zip.");
-                    return;
-                }
-
-                FileTime latestChange = kubeJSFiles.stream()
-                        .map(path -> {
-                            try {
-                                return Files.getLastModifiedTime(path);
-                            } catch (IOException e) {
-                                return FileTime.fromMillis(0);
-                            }
-                        })
-                        .max(FileTime::compareTo)
-                        .orElse(FileTime.fromMillis(0));
-
-                if (latestChange.compareTo(lastBuildTime) <= 0 && Files.exists(kubeJSZip)) {
-                    LOGGER.info("Mods have not changed since last build. Skipping zip creation.");
-                    return;
-                }
-
-                LOGGER.info("Starting config.zip creation. Found {} mods.", kubeJSFiles.size());
-
-                try {
-                    Path parent = kubeJSZip.getParent();
-                    if (parent != null) {
-                        Files.createDirectories(parent);
-                    }
-                } catch (IOException e) {
-                    LOGGER.error("Failed to create directories for mods.zip", e);
-                    return;
-                }
-
-                try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(kubeJSZip))) {
-                    int total = kubeJSFiles.size();
-                    int index = 0;
-
-                    for (Path path : kubeJSFiles) {
-                        index++;
-                        try {
-                            Path relativePath = kubeJSFolder.relativize(path);
-                            ZipEntry zipEntry = new ZipEntry(relativePath.toString());
-                            zipOut.putNextEntry(zipEntry);
-                            Files.copy(path, zipOut);
-                            zipOut.closeEntry();
-
-                            LOGGER.info("[{}/{}] Included config: ({})",
-                                    index, total, path.getFileName());
-                        } catch (Exception e) {
-                            LOGGER.error("Failed to process mod: " + path, e);
-                        }
-                    }
-                }
-
-                lastBuildTime = latestChange;
-                LOGGER.info("Finished creating mods.zip in shared-files. {} mods processed.", kubeJSFiles.size());
-
-            } catch (IOException e) {
-                LOGGER.error("Failed to create mods.zip", e);
-            }
+            saveModsToZip();
+            saveFolderToZip(Path.of("config"), Path.of("MMMMM", "shared-files", "config.zip"));
+            saveFolderToZip(Path.of("kubejs"), Path.of("MMMMM", "shared-files", "kubejs.zip"));
         });
     }
 
-    public static void saveConfigToZip() {
-        executor.execute(() -> {
-            Path configFolder = Path.of("config");
-            Path configZip = Path.of("MMMMM/shared-files/config.zip");
+    private static void saveFolderToZip(Path sourceFolder, Path targetZip) {
+        try {
+            Path parent = targetZip.getParent();
+            if (parent != null) Files.createDirectories(parent);
 
-            try {
-                List<Path> configFiles = Files.walk(configFolder)
-                        .filter(Files::isRegularFile)
-                        .collect(Collectors.toList());
-
-                if (configFiles.isEmpty()) {
-                    LOGGER.warn("No config files found, skipping config.zip.");
-                    return;
-                }
-
-                FileTime latestChange = configFiles.stream()
-                        .map(path -> {
-                            try {
-                                return Files.getLastModifiedTime(path);
-                            } catch (IOException e) {
-                                return FileTime.fromMillis(0);
-                            }
-                        })
-                        .max(FileTime::compareTo)
-                        .orElse(FileTime.fromMillis(0));
-
-                if (latestChange.compareTo(lastBuildTime) <= 0 && Files.exists(configZip)) {
-                    LOGGER.info("Mods have not changed since last build. Skipping zip creation.");
-                    return;
-                }
-
-                LOGGER.info("Starting config.zip creation. Found {} mods.", configFiles.size());
-
-                try {
-                    Path parent = configZip.getParent();
-                    if (parent != null) {
-                        Files.createDirectories(parent);
-                    }
-                } catch (IOException e) {
-                    LOGGER.error("Failed to create directories for mods.zip", e);
-                    return;
-                }
-
-                try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(configZip))) {
-                    int total = configFiles.size();
-                    int index = 0;
-
-                    for (Path path : configFiles) {
-                        index++;
-                        try {
-                            Path relativePath = configFolder.relativize(path);
-                            ZipEntry zipEntry = new ZipEntry(relativePath.toString());
-                            zipOut.putNextEntry(zipEntry);
-                            Files.copy(path, zipOut);
-                            zipOut.closeEntry();
-
-                            LOGGER.info("[{}/{}] Included config: ({})",
-                                    index, total, path.getFileName());
-                        } catch (Exception e) {
-                            LOGGER.error("Failed to process mod: " + path, e);
-                        }
-                    }
-                }
-
-                lastBuildTime = latestChange;
-                LOGGER.info("Finished creating mods.zip in shared-files. {} mods processed.", configFiles.size());
-
-            } catch (IOException e) {
-                LOGGER.error("Failed to create mods.zip", e);
+            try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(targetZip))) {
+                addFolderToZip(sourceFolder, sourceFolder, zipOut);
+                LOGGER.info("Successfully created {} in shared-files.", targetZip.getFileName());
             }
-        });
+        } catch (IOException e) {
+            LOGGER.error("Failed to create " + targetZip.getFileName(), e);
+        }
+    }
+
+    public static void addFolderToZip(Path rootFolder, Path sourceFolder, ZipOutputStream zipOut) throws IOException {
+        if (!Files.exists(sourceFolder)) {
+            LOGGER.info("Source folder does not exist, skipping: " + sourceFolder);
+            return;
+        }
+
+        Files.walk(sourceFolder)
+                .filter(Files::isRegularFile)
+                .forEach(path -> {
+                    try {
+                        Path relativePath = rootFolder.relativize(path);
+                        String zipEntryName = relativePath.toString().replace('\\', '/');
+                        ZipEntry zipEntry = new ZipEntry(zipEntryName);
+                        zipOut.putNextEntry(zipEntry);
+                        Files.copy(path, zipOut);
+                        zipOut.closeEntry();
+                    } catch (IOException e) {
+                        LOGGER.error("Failed to add file to zip: " + path, e);
+                    }
+                });
     }
 
     public static void saveModsToZip() {
