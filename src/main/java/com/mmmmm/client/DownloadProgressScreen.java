@@ -18,6 +18,9 @@ public class DownloadProgressScreen extends Screen {
     private boolean isExtracting = false;
     private String extractionMessage = "";
 
+    // Separate status line shown while downloading (so we can still render live speed/ETA)
+    private String downloadStatusMessage = "";
+
     // Flow state: false = selection step, true = progress step
     private boolean selectionConfirmed = false;
     private volatile boolean isCancelled = false;
@@ -161,9 +164,19 @@ public class DownloadProgressScreen extends Screen {
         this.estimatedTimeRemaining = estimatedTimeRemaining;
     }
 
+    /**
+     * Update the status line shown during the download phase (does not hide speed/ETA).
+     */
+    public void setDownloadStatus(String message) {
+        this.downloadStatusMessage = message == null ? "" : message;
+        this.isExtracting = false;
+    }
+
     public void startExtraction(String extractionMessage) {
         this.isExtracting = true;
-        this.extractionMessage = extractionMessage + " (Last download speed: " + downloadSpeed + ")";
+        // Keep extraction UI separate from the download speed UI so the screen can
+        // show the *current* download speed while downloading.
+        this.extractionMessage = extractionMessage;
     }
 
     @Override
@@ -193,9 +206,12 @@ public class DownloadProgressScreen extends Screen {
         if (isExtracting) {
             guiGraphics.drawCenteredString(this.font, extractionMessage, this.width / 2, barY - 30, 0xFFFFFF);
         } else {
+            if (!downloadStatusMessage.isBlank()) {
+                guiGraphics.drawCenteredString(this.font, downloadStatusMessage, this.width / 2, barY - 55, 0xFFFFFF);
+            }
             guiGraphics.drawCenteredString(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFF);
             if (!estimatedTimeRemaining.isEmpty()) {
-                guiGraphics.drawCenteredString(this.font, "ETA: " + estimatedTimeRemaining, this.width / 2, barY - 55, 0xFFFFFF);
+                guiGraphics.drawCenteredString(this.font, "ETA: " + estimatedTimeRemaining, this.width / 2, barY - 80, 0xFFFFFF);
             }
         }
 

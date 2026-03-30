@@ -169,8 +169,8 @@ public class ClientEventHandlers {
             throw e;
         }
 
-        // Download
-        minecraftSafeUpdate(progressScreen, () -> progressScreen.startExtraction("Downloading " + extractionLabel + "..."));
+        // Download (status line only; keep speed/ETA visible)
+        minecraftSafeUpdate(progressScreen, () -> progressScreen.setDownloadStatus("Downloading " + extractionLabel + "..."));
         downloadFileWithProgress(connection, downloadPath, progressScreen);
 
         // Validate and extract
