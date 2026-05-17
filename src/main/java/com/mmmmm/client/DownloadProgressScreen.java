@@ -181,7 +181,6 @@ public class DownloadProgressScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        this.extractBackground(guiGraphics, mouseX, mouseY, partialTicks);
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTicks);
 
         guiGraphics.centeredText(
@@ -191,7 +190,7 @@ public class DownloadProgressScreen extends Screen {
                         : "Select what to download from " + serverUpdateIP,
                 this.width / 2,
                 20,
-                0xFFFFFF
+                0xFFFFFFFF
         );
 
         if (!selectionConfirmed) {
@@ -204,20 +203,20 @@ public class DownloadProgressScreen extends Screen {
         int barY = this.height / 2;
 
         if (isExtracting) {
-            guiGraphics.centeredText(this.font, extractionMessage, this.width / 2, barY - 30, 0xFFFFFF);
+            guiGraphics.centeredText(this.font, extractionMessage, this.width / 2, barY - 30, 0xFFFFFFFF);
         } else {
             if (!downloadStatusMessage.isBlank()) {
-                guiGraphics.centeredText(this.font, downloadStatusMessage, this.width / 2, barY - 55, 0xFFFFFF);
+                guiGraphics.centeredText(this.font, downloadStatusMessage, this.width / 2, barY - 55, 0xFFFFFFFF);
             }
-            guiGraphics.centeredText(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFF);
+            guiGraphics.centeredText(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFFFF);
             if (!estimatedTimeRemaining.isEmpty()) {
-                guiGraphics.centeredText(this.font, "ETA: " + estimatedTimeRemaining, this.width / 2, barY - 80, 0xFFFFFF);
+                guiGraphics.centeredText(this.font, "ETA: " + estimatedTimeRemaining, this.width / 2, barY - 80, 0xFFFFFFFF);
             }
         }
 
         guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFFAAAAAA);
         int progressWidth = (int) (barWidth * (progress / 100.0));
         guiGraphics.fill(barX, barY, barX + progressWidth, barY + barHeight, 0xFF00FF00);
-        guiGraphics.centeredText(this.font, progress + "%", this.width / 2, barY + 5, 0xFFFFFF);
+        guiGraphics.centeredText(this.font, progress + "%", this.width / 2, barY + 5, 0xFFFFFFFF);
     }
 }
