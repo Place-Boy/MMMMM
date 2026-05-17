@@ -8,7 +8,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 /**
  * Config class to handle mod settings and updates.
  */
-@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = MMMMM.MODID)
 public class Config {
 
     private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
