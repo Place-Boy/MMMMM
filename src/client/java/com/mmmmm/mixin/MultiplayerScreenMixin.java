@@ -3,7 +3,7 @@ package com.mmmmm.mixin;
 import com.mmmmm.client.ClientEventHandlers;
 import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.multiplayer.ServerData;
@@ -51,7 +51,7 @@ public class MultiplayerScreenMixin {
     }
 
     @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    private void onRender(Gui context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         for (Button button : this.mmmmm$updateButtons) {
             button.render(context, mouseX, mouseY, delta);
         }

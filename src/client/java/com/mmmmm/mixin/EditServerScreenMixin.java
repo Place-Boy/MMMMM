@@ -3,10 +3,10 @@ package com.mmmmm.mixin;
 import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.screens.multiplayer.EditServerScreen;
+import net.minecraft.client.gui.screens.ManageServerScreen;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(EditServerScreen.class)
+@Mixin(ManageServerScreen.class)
 public abstract class EditServerScreenMixin {
 
     private int[] labelYPositions = new int[2]; // 0 = Server Name Y, 1 = Server Address Y
@@ -25,7 +25,7 @@ public abstract class EditServerScreenMixin {
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
-        EditServerScreen screen = (EditServerScreen) (Object) this;
+        ManageServerScreen screen = (ManageServerScreen) (Object) this;
 
         int[] index = {0};
         screen.children().stream()
@@ -68,14 +68,14 @@ public abstract class EditServerScreenMixin {
     private void onSaveCustomField(CallbackInfo ci) {
         if (customField != null) {
             String customValue = customField.getValue();
-            EditServerScreen screen = (EditServerScreen) (Object) this;
+            ManageServerScreen screen = (ManageServerScreen) (Object) this;
             String serverIP = ((EditServerScreenAccessor) screen).getServerData().ip;
             ServerMetadata.setMetadata(serverIP, customValue);
         }
     }
 
     @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V"))
-    private void redirectDrawLabel(GuiGraphics context, Font textRenderer, Component text, int x, int y, int color) {
+    private void redirectDrawLabel(Gui context, Font textRenderer, Component text, int x, int y, int color) {
         // Skip original calls for the first two labels
         if (text.getString().contains("Server Name") || text.getString().contains("Server Address")) {
             return;
@@ -85,7 +85,7 @@ public abstract class EditServerScreenMixin {
     }
 
     @Inject(method = "render", at = @At("HEAD"))
-    private void onRenderStart(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    private void onRenderStart(Gui context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         int x = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
         if (labelYPositions[0] != 0) {
             context.drawString(Minecraft.getInstance().font, "Server Name", x, labelYPositions[0], 0xFFFFFFFF, true);
