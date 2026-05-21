@@ -5,10 +5,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.command.permission.Permission;
-import net.minecraft.command.permission.PermissionLevel;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.permissions.Permission;
+import net.minecraft.server.permissions.PermissionLevel;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
@@ -27,7 +27,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static com.mmmmm.MMMMM.LOGGER;
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.commands.Commands.literal;
 
 public class RegisterCommands {
     private static java.nio.file.attribute.FileTime lastBuildTime = java.nio.file.attribute.FileTime.fromMillis(0);
@@ -41,14 +41,14 @@ public class RegisterCommands {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(literal("mmmmm")
                     .then(literal("save-mods")
-                            .requires(source -> source.getPermissions().hasPermission(new Permission.Level(PermissionLevel.ADMINS)))
+                            .requires(source -> source.permissions().hasPermission(new Permission.HasCommandLevel(PermissionLevel.ADMINS)))
                             .executes(RegisterCommands::saveModsToZip)
                     )
             );
         });
     }
 
-    public static int saveModsToZip(CommandContext<ServerCommandSource> context) {
+    public static int saveModsToZip(CommandContext<CommandSourceStack> context) {
         executor.execute(() -> {
             Path modsFolder = Path.of("mods");
             Path modsZip = Path.of("MMMMM/shared-files/mods.zip");
@@ -122,7 +122,7 @@ public class RegisterCommands {
                 LOGGER.error("Failed to create mods.zip", e);
             }
         });
-        context.getSource().sendFeedback(() -> Text.literal("Started mods.zip creation."), false);
+        context.getSource().sendSuccess(() -> Component.literal("Started mods.zip creation."), false);
         return 1;
     }
 

@@ -4,14 +4,14 @@ import com.mmmmm.Checksum;
 import com.mmmmm.mixin.MultiplayerScreenAccessor;
 import com.mmmmm.mixin.ScreenInvoker;
 import net.fabricmc.api.ClientModInitializer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.client.option.ServerList;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.ServerList;
+import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,11 +45,11 @@ public class ClientEventHandlers implements ClientModInitializer {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException ignored) {}
-                MinecraftClient client = MinecraftClient.getInstance();
-                Screen current = client.currentScreen;
-                if (current instanceof MultiplayerScreen screen && lastScreen != screen) {
+                Minecraft client = Minecraft.getInstance();
+                Screen current = client.screen;
+                if (current instanceof JoinMultiplayerScreen screen && lastScreen != screen) {
                     lastScreen = screen;
-                } else if (!(current instanceof MultiplayerScreen)) {
+                } else if (!(current instanceof JoinMultiplayerScreen)) {
                     lastScreen = null;
                 }
             }
@@ -58,19 +58,19 @@ public class ClientEventHandlers implements ClientModInitializer {
 
 
 
-    private static ButtonWidget createServerButton(int x, int y, ServerInfo server) {
-        return ButtonWidget.builder(
-                Text.literal("Update"),
+    private static Button createServerButton(int x, int y, ServerData server) {
+        return Button.builder(
+                Component.literal("Update"),
                 (btn) -> {
-                    String serverUpdateIP = ServerMetadata.getMetadata(server.address);
+                    String serverUpdateIP = ServerMetadata.getMetadata(server.ip);
                     LOGGER.info("Update button clicked for server: {}", serverUpdateIP);
                     downloadAndProcessMod(serverUpdateIP);
                 }
-        ).dimensions(x, y, 50, 20).build();
+        ).bounds(x, y, 50, 20).build();
     }
 
     public static void downloadAndProcessMod(String serverUpdateIP) {
-        MinecraftClient minecraft = MinecraftClient.getInstance();
+        Minecraft minecraft = Minecraft.getInstance();
         TitleScreen titleScreen = new TitleScreen();
 
         String modsUrl = serverUpdateIP;

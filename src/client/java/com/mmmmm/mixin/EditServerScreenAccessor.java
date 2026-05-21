@@ -1,12 +1,12 @@
 package com.mmmmm.mixin;
 
-import net.minecraft.client.gui.screen.multiplayer.AddServerScreen;
-import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.gui.screens.multiplayer.EditServerScreen;
+import net.minecraft.client.multiplayer.ServerData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(AddServerScreen.class)
+@Mixin(EditServerScreen.class)
 public interface EditServerScreenAccessor {
-    @Accessor("server")
-    ServerInfo getServerData();
+    @Accessor("serverData")
+    ServerData getServerData();
 }
