@@ -53,7 +53,7 @@ public class RegisterCommands {
 
         dispatcher.register(Commands.literal("mmmmm")
                 .then(Commands.literal("save-mods")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .executes(context -> {
                             saveModsToZip();
                             context.getSource().sendSuccess(
@@ -64,7 +64,7 @@ public class RegisterCommands {
                         })
                 )
                 .then(Commands.literal("save-all")
-                        .requires(source -> source.hasPermission(2))
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .executes(context -> {
                             saveModsToZip();
                             saveAllToZip();

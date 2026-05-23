@@ -30,7 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-@EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+@EventBusSubscriber(modid = MMMMM.MODID, value = Dist.CLIENT)
 public class ClientEventHandlers {
 
     private static final int CONNECTION_TIMEOUT_MS = 5000;
@@ -50,6 +50,10 @@ public class ClientEventHandlers {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventHandlers.class);
     private static final List<Button> serverButtons = new ArrayList<>();
 
+    public static List<Button> getServerButtons() {
+        return serverButtons;
+    }
+
     // Reuse a single executor for download tasks instead of creating per-call executors
     private static final ExecutorService DOWNLOAD_EXECUTOR = Executors.newSingleThreadExecutor();
 
@@ -60,6 +64,7 @@ public class ClientEventHandlers {
         }
 
         LOGGER.info("Multiplayer screen initialized. Adding server buttons.");
+        serverButtons.clear();
         ServerList serverList = new ServerList(Minecraft.getInstance());
         serverList.load();
 
@@ -328,4 +333,3 @@ public class ClientEventHandlers {
         }
     }
 }
-
