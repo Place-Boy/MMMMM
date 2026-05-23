@@ -2,24 +2,20 @@ package com.mmmmm.mixin;
 
 import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.ManageServerScreen;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ManageServerScreen.class)
 public abstract class EditServerScreenMixin {
 
-    private int[] labelYPositions = new int[2]; // 0 = Server Name Y, 1 = Server Address Y
+    @Unique
     private EditBox customField;
 
     @Inject(method = "init", at = @At("TAIL"))
@@ -27,15 +23,11 @@ public abstract class EditServerScreenMixin {
         Minecraft mc = Minecraft.getInstance();
         ManageServerScreen screen = (ManageServerScreen) (Object) this;
 
-        int[] index = {0};
         screen.children().stream()
                 .filter(c -> c instanceof EditBox)
                 .map(c -> (EditBox) c)
                 .forEach(editBox -> {
                     editBox.setY(editBox.getY() - 30);
-                    if (index[0] < 2) {
-                        labelYPositions[index[0]++] = editBox.getY() - 10;
-                    }
                 });
 
         // Move the resource pack prompt down
@@ -72,27 +64,5 @@ public abstract class EditServerScreenMixin {
             String serverIP = ((EditServerScreenAccessor) screen).getServerData().ip;
             ServerMetadata.setMetadata(serverIP, customValue);
         }
-    }
-
-    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V"))
-    private void redirectDrawLabel(Gui context, Font textRenderer, Component text, int x, int y, int color) {
-        // Skip original calls for the first two labels
-        if (text.getString().contains("Server Name") || text.getString().contains("Server Address")) {
-            return;
-        }
-        // Draw other labels normally
-        context.drawString(textRenderer, text, x, y, color);
-    }
-
-    @Inject(method = "render", at = @At("HEAD"))
-    private void onRenderStart(Gui context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        int x = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
-        if (labelYPositions[0] != 0) {
-            context.drawString(Minecraft.getInstance().font, "Server Name", x, labelYPositions[0], 0xFFFFFFFF, true);
-        }
-        if (labelYPositions[1] != 0) {
-            context.drawString(Minecraft.getInstance().font, "Server Address", x, labelYPositions[1], 0xFFFFFFFF, true);
-        }
-        context.drawString(Minecraft.getInstance().font, "Download URL", x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xFFFFFFFF, true);
     }
 }
