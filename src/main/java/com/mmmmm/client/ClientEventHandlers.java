@@ -64,7 +64,6 @@ public class ClientEventHandlers {
         }
 
         LOGGER.info("Multiplayer screen initialized. Adding server buttons.");
-        serverButtons.clear();
         ServerList serverList = new ServerList(Minecraft.getInstance());
         serverList.load();
 

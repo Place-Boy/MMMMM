@@ -6,7 +6,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.EditServerScreen;
 import net.minecraft.network.chat.Component;
-import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -81,21 +80,12 @@ public abstract class EditServerScreenMixin {
     private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         int x = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
         if (labelYPositions[0] != 0) {
-<<<<<<< HEAD
-            graphics.text(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0], 0xFFA0A0A0);
-        }
-        if (labelYPositions[1] != 0) {
-            graphics.text(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1], 0xFFA0A0A0);
-        }
-        graphics.text(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xFFA0A0A0);
-=======
             graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0], 0xA0A0A0);
         }
         if (labelYPositions[1] != 0) {
             graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1], 0xA0A0A0);
         }
         graphics.drawString(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xA0A0A0);
->>>>>>> parent of 22c38e3b (Update to 26.1)
     }
 
     // Redirect original label draw call for "Server Name"

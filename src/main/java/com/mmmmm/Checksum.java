@@ -75,7 +75,6 @@ public class Checksum {
         for (String mod : oldChecksums.keySet()) {
             if (!newChecksums.containsKey(mod)) {
                 System.out.println("Removed: " + mod);
-                Files.deleteIfExists(modsDirectory.resolve(mod));
             }
         }
     }

@@ -7,7 +7,6 @@
   ],
   "client": [
     "EditServerScreenMixin",
-    "EditServerScreenAccessor",
-    "JoinMultiplayerScreenMixin"
+    "EditServerScreenAccessor"
   ]
 }
