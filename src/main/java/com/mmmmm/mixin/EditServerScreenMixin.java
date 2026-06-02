@@ -2,9 +2,9 @@ package com.mmmmm.mixin;
 
 import com.mmmmm.client.ServerMetadata;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.ManageServerScreen;
+import net.minecraft.client.gui.screens.EditServerScreen;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Debug;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static com.mojang.text2speech.Narrator.LOGGER;
 
-@Mixin(ManageServerScreen.class)
+@Mixin(EditServerScreen.class)
 public abstract class EditServerScreenMixin {
 
     @Shadow public abstract void onClose();
@@ -27,7 +27,7 @@ public abstract class EditServerScreenMixin {
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
-        ManageServerScreen screen = (ManageServerScreen) (Object) this;
+        EditServerScreen screen = (EditServerScreen) (Object) this;
 
         int[] index = {0};
         screen.children().stream()
@@ -71,39 +71,48 @@ public abstract class EditServerScreenMixin {
         LOGGER.info("onSaveCustomField called");
         if (customField != null) {
             String customValue = customField.getValue();
-            ManageServerScreen screen = (ManageServerScreen) (Object) this;
+            EditServerScreen screen = (EditServerScreen) (Object) this;
             String serverIP = ((EditServerScreenAccessor) screen).getServerData().ip;
             ServerMetadata.setMetadata(serverIP, customValue);
         }
     }
 
-    @Inject(method = "extractRenderState", at = @At("TAIL"))
-    private void onRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    @Inject(method = "render", at = @At("TAIL"))
+    private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         int x = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2 - 100;
         if (labelYPositions[0] != 0) {
+<<<<<<< HEAD
             graphics.text(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0], 0xFFA0A0A0);
         }
         if (labelYPositions[1] != 0) {
             graphics.text(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1], 0xFFA0A0A0);
         }
         graphics.text(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xFFA0A0A0);
+=======
+            graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Name"), x, labelYPositions[0], 0xA0A0A0);
+        }
+        if (labelYPositions[1] != 0) {
+            graphics.drawString(Minecraft.getInstance().font, Component.literal("Server Address"), x, labelYPositions[1], 0xA0A0A0);
+        }
+        graphics.drawString(Minecraft.getInstance().font, Component.literal("Download URL"), x, Minecraft.getInstance().getWindow().getGuiScaledHeight() / 4 + 50, 0xA0A0A0);
+>>>>>>> parent of 22c38e3b (Update to 26.1)
     }
 
     // Redirect original label draw call for "Server Name"
-    @Redirect(method = "extractRenderState", at = @At(
+    @Redirect(method = "render", at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;text(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V",
+            target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I",
             ordinal = 0))
-    private void skipNameLabel(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
-        // Do nothing
+    private int skipNameLabel(GuiGraphics graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
+        return 0;
     }
 
     // Redirect original label draw call for "Server Address"
-    @Redirect(method = "extractRenderState", at = @At(
+    @Redirect(method = "render", at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;text(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V",
+            target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)I",
             ordinal = 1))
-    private void skipAddressLabel(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
-        // Do nothing
+    private int skipAddressLabel(GuiGraphics graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
+        return 0;
     }
 }
