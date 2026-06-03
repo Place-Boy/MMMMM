@@ -181,9 +181,9 @@ public class ClientEventHandlers {
         minecraftSafeUpdate(progressScreen, () -> progressScreen.startExtraction("Extracting " + extractionLabel + "..."));
         validateDownloadedFile(downloadPath);
         prepareDestinationDirectory(unzipDestination);
-        compareChecksumsIfExists(unzipDestination, checksumFile);
+        compareChecksumsIfExists(downloadPath, unzipDestination, checksumFile);
         extractZipFile(downloadPath, unzipDestination);
-        saveUpdatedChecksums(unzipDestination, checksumFile);
+        saveUpdatedChecksums(downloadPath, unzipDestination, checksumFile);
     }
 
     private static HttpURLConnection initializeConnection(String url) throws IOException {
@@ -296,10 +296,10 @@ public class ClientEventHandlers {
         }
     }
 
-    private static void compareChecksumsIfExists(Path destination, Path checksumFile) throws Exception {
+    private static void compareChecksumsIfExists(Path zipPath, Path destination, Path checksumFile) throws Exception {
         if (Files.exists(checksumFile)) {
             LOGGER.info("Comparing checksums for {} using {}...", destination, checksumFile);
-            Checksum.compareChecksums(destination, checksumFile);
+            Checksum.compareChecksums(zipPath, destination, checksumFile);
         }
     }
 
@@ -321,9 +321,9 @@ public class ClientEventHandlers {
         }
     }
 
-    private static void saveUpdatedChecksums(Path destination, Path checksumFile) throws Exception {
+    private static void saveUpdatedChecksums(Path zipPath, Path destination, Path checksumFile) throws Exception {
         LOGGER.info("Saving updated checksums for {} to {}...", destination, checksumFile);
-        Checksum.saveChecksums(destination, checksumFile);
+        Checksum.saveChecksums(zipPath, destination, checksumFile);
     }
 
     private static void sendPlayerMessage(String message) {
