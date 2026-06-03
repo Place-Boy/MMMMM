@@ -1,6 +1,7 @@
 package com.mmmmm;
 
 import com.google.gson.Gson;
+import com.mojang.realmsclient.client.Request;
 
 import java.nio.file.Path;
 import java.nio.file.Files;
@@ -75,6 +76,7 @@ public class Checksum {
         for (String mod : oldChecksums.keySet()) {
             if (!newChecksums.containsKey(mod)) {
                 System.out.println("Removed: " + mod);
+                Request.Delete.delete(mod);
             }
         }
     }
