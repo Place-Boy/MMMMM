@@ -7,7 +7,10 @@ import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
+import static com.mmmmm.MMMMM.LOGGER;
 
 /**
  * Utility class for computing file checksums.
@@ -39,6 +42,7 @@ public class Checksum {
                     Path extractedFile = destination.resolve(relativePath).normalize();
                     if (Files.isRegularFile(extractedFile)) {
                         checksums.put(relativePath, computeChecksum(extractedFile));
+                        LOGGER.info("Computed checksum for " + relativePath + ": " + checksums.get(relativePath));
                     }
                 }
             }
@@ -68,22 +72,33 @@ public class Checksum {
         for (String mod : zipEntries) {
             Path file = destination.resolve(mod).normalize();
             if (!oldChecksums.containsKey(mod)) {
-                System.out.println("Added: " + mod);
+                LOGGER.info("Added: " + mod);
             } else if (Files.isRegularFile(file)) {
                 String currentChecksum = computeChecksum(file);
                 if (!currentChecksum.equals(oldChecksums.get(mod))) {
-                    System.out.println("Modified: " + mod);
+                    LOGGER.info("Modified: " + mod);
                 }
             }
         }
 
         for (String mod : oldChecksums.keySet()) {
             if (!zipEntries.contains(mod)) {
-                System.out.println("Removed: " + mod);
+                Path fileToDelete = destination.resolve(mod).normalize();
                 try {
-                    Files.deleteIfExists(destination.resolve(mod).normalize());
+                    Files.deleteIfExists(fileToDelete);
                 } catch (Exception e) {
-                    System.err.println("Failed to delete " + mod + " (might be locked by the game): " + e.getMessage());
+                    LOGGER.warn("Failed to delete " + mod + " (locked by game). Queuing for alternative removal.");
+
+                    fileToDelete.toFile().deleteOnExit();
+
+                    try {
+                        Path renamedFile = fileToDelete.resolveSibling(fileToDelete.getFileName().toString() + ".deleted");
+                        Files.move(fileToDelete, renamedFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        renamedFile.toFile().deleteOnExit();
+                        LOGGER.info("Renamed locked file to: " + renamedFile.getFileName());
+                    } catch (Exception renameException) {
+                        LOGGER.error("Could not rename the locked file. It will be deleted when the game closes.", renameException);
+                    }
                 }
             }
         }
