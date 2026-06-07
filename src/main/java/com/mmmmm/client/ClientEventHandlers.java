@@ -22,13 +22,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 @EventBusSubscriber(modid = MMMMM.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public class ClientEventHandlers {
@@ -54,7 +51,7 @@ public class ClientEventHandlers {
         return serverButtons;
     }
 
-    // Reuse a single executor for download tasks instead of creating per-call executors
+    // Single thread executor ensures downloads queue up predictably rather than racing each other
     private static final ExecutorService DOWNLOAD_EXECUTOR = Executors.newSingleThreadExecutor();
 
     @SubscribeEvent
@@ -87,9 +84,9 @@ public class ClientEventHandlers {
         return Button.builder(
                 Component.literal("Update"),
                 (btn) -> {
-                    String serverUpdateIP = ServerMetadata.getMetadata(server.ip); // Retrieve custom data (e.g., URL or IP)
+                    String serverUpdateIP = ServerMetadata.getMetadata(server.ip);
                     LOGGER.info("Update button clicked for server: {}", serverUpdateIP);
-                    downloadAndProcessMod(serverUpdateIP); // Pass the correct metadata
+                    downloadAndProcessMod(serverUpdateIP);
                 }
         ).bounds(x, y, 50, 20).build();
     }
@@ -144,7 +141,6 @@ public class ClientEventHandlers {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = "http://" + url;
         }
-        // Ensure no trailing slash so we can safely append /name.zip
         if (url.endsWith("/")) {
             url = url.substring(0, url.length() - 1);
         }
@@ -173,17 +169,17 @@ public class ClientEventHandlers {
             throw e;
         }
 
-        // Download (status line only; keep speed/ETA visible)
+        // Track and process download progress
         minecraftSafeUpdate(progressScreen, () -> progressScreen.setDownloadStatus("Downloading " + extractionLabel + "..."));
         downloadFileWithProgress(connection, downloadPath, progressScreen);
 
-        // Validate and extract
-        minecraftSafeUpdate(progressScreen, () -> progressScreen.startExtraction("Extracting " + extractionLabel + "..."));
+        // Track and process dynamic content verification
+        minecraftSafeUpdate(progressScreen, () -> progressScreen.startExtraction("Processing " + extractionLabel + "..."));
         validateDownloadedFile(downloadPath);
         prepareDestinationDirectory(unzipDestination);
-        compareChecksumsIfExists(downloadPath, unzipDestination, checksumFile);
-        extractZipFile(downloadPath, unzipDestination);
-        saveUpdatedChecksums(downloadPath, unzipDestination, checksumFile);
+
+        // This single execution now intelligently adds, updates, or deletes targeted files
+        Checksum.compareChecksums(downloadPath, unzipDestination, checksumFile);
     }
 
     private static HttpURLConnection initializeConnection(String url) throws IOException {
@@ -208,7 +204,7 @@ public class ClientEventHandlers {
                                                  DownloadProgressScreen progressScreen) throws IOException {
         long contentLength = connection.getContentLengthLong();
         if (contentLength <= 0) {
-            contentLength = -1; // unknown
+            contentLength = -1;
         }
 
         long startTime = System.nanoTime();
@@ -226,20 +222,17 @@ public class ClientEventHandlers {
                     totalRead += read;
 
                     long elapsedNanos = System.nanoTime() - startTime;
-                    if (elapsedNanos <= 0) elapsedNanos = 1; // avoid div by zero
+                    if (elapsedNanos <= 0) elapsedNanos = 1;
                     double elapsedSeconds = elapsedNanos / 1_000_000_000.0;
 
-                    // Progress percent
                     final int percent;
                     if (contentLength > 0) {
                         percent = (int) ((totalRead * 100) / contentLength);
                     } else {
-                        // Fallback when content length is unknown: use a fake percent based on chunks
                         percent = Math.min(99, (int) (elapsedSeconds * 10));
                     }
                     final int clampedPercent = Math.min(100, Math.max(0, percent));
 
-                    // Download speed (bytes/sec -> KB/s or MB/s)
                     double bytesPerSecond = totalRead / elapsedSeconds;
                     final String speedString;
                     if (bytesPerSecond >= 1024 * 1024) {
@@ -250,7 +243,6 @@ public class ClientEventHandlers {
                         speedString = String.format("%.0f B/s", bytesPerSecond);
                     }
 
-                    // ETA
                     final String etaString;
                     if (contentLength > 0 && bytesPerSecond > 0) {
                         double remainingBytes = contentLength - totalRead;
@@ -294,36 +286,6 @@ public class ClientEventHandlers {
         if (!Files.exists(destination)) {
             Files.createDirectories(destination);
         }
-    }
-
-    private static void compareChecksumsIfExists(Path zipPath, Path destination, Path checksumFile) throws Exception {
-        if (Files.exists(checksumFile)) {
-            LOGGER.info("Comparing checksums for {} using {}...", destination, checksumFile);
-            Checksum.compareChecksums(zipPath, destination, checksumFile);
-        }
-    }
-
-    private static void extractZipFile(Path zipPath, Path destination) throws IOException {
-        try (InputStream fileInputStream = Files.newInputStream(zipPath);
-             ZipInputStream zipInputStream = new ZipInputStream(fileInputStream)) {
-
-            ZipEntry entry;
-            while ((entry = zipInputStream.getNextEntry()) != null) {
-                Path entryPath = destination.resolve(entry.getName()).normalize();
-                if (entry.isDirectory()) {
-                    Files.createDirectories(entryPath);
-                } else {
-                    Files.createDirectories(entryPath.getParent());
-                    Files.copy(zipInputStream, entryPath, StandardCopyOption.REPLACE_EXISTING);
-                }
-                zipInputStream.closeEntry();
-            }
-        }
-    }
-
-    private static void saveUpdatedChecksums(Path zipPath, Path destination, Path checksumFile) throws Exception {
-        LOGGER.info("Saving updated checksums for {} to {}...", destination, checksumFile);
-        Checksum.saveChecksums(zipPath, destination, checksumFile);
     }
 
     private static void sendPlayerMessage(String message) {

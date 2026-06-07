@@ -2,119 +2,89 @@ package com.mmmmm;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.HexFormat;
 import java.util.Map;
 import java.util.Set;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.util.zip.ZipFile;
+import java.util.Enumeration;
 
-import static com.mmmmm.MMMMM.LOGGER;
-
-/**
- * Utility class for computing file checksums and managing server synchronization.
- */
 public class Checksum {
 
-    /**
-     * Computes the SHA-256 checksum of a file using a memory-safe buffer.
-     *
-     * @param filePath The path to the file.
-     * @return The computed checksum as a hexadecimal string.
-     * @throws Exception If an error occurs while reading the file or computing the checksum.
-     */
-    public static String computeChecksum(Path filePath) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        try (InputStream in = Files.newInputStream(filePath);
-             DigestInputStream dis = new DigestInputStream(in, digest)) {
-            byte[] buffer = new byte[8192];
-            while (dis.read(buffer) != -1) {
-                // read stream to update digest
-            }
-        }
-        byte[] hashBytes = digest.digest();
-        return HexFormat.of().formatHex(hashBytes);
-    }
+    private static final Logger LOGGER = LoggerFactory.getLogger(Checksum.class);
 
-    public static void saveChecksums(Path zipFile, Path destination, Path checksumFile) throws Exception {
-        Map<String, String> checksums = new HashMap<>();
-
-        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                if (!entry.isDirectory()) {
-                    String relativePath = entry.getName();
-                    Path fileOnDisk = destination.resolve(relativePath).normalize();
-
-                    // ONLY add to the JSON if it exists in the zip AND on disk
-                    if (Files.exists(fileOnDisk)) {
-                        checksums.put(relativePath, computeChecksum(fileOnDisk));
-                    }
-                }
-            }
-        }
-        Files.writeString(checksumFile, new Gson().toJson(checksums));
-    }
-
-    public static void compareChecksums(Path zipFile, Path destination, Path checksumFile) throws Exception {
+    public static void compareChecksums(Path zipFilePath, Path destination, Path checksumFile) throws Exception {
         Gson gson = new Gson();
         Type mapType = new TypeToken<Map<String, String>>() {}.getType();
 
-        // 1. Load the official "Source of Truth" from the previous checksum file
-        Map<String, String> oldChecksums = Files.exists(checksumFile) ?
-                gson.fromJson(Files.readString(checksumFile), mapType) : Collections.emptyMap();
-        if (oldChecksums == null) oldChecksums = Collections.emptyMap();
+        // Ensure we load a mutable map
+        Map<String, String> oldChecksums = new HashMap<>();
+        if (Files.exists(checksumFile)) {
+            Map<String, String> loaded = gson.fromJson(Files.readString(checksumFile), mapType);
+            if (loaded != null) {
+                oldChecksums.putAll(loaded);
+            }
+        }
 
-        // 2. Identify exactly what the server wants us to have
         Set<String> zipEntries = new HashSet<>();
-        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                if (!entry.isDirectory()) zipEntries.add(entry.getName());
-            }
-        }
 
-        // 3. CLEANUP PHASE: Remove/Rename anything on disk that is NOT in the new ZIP
-        // This is the critical part: If it's not in the server ZIP, it doesn't belong.
-        for (String existingFile : oldChecksums.keySet()) {
-            if (!zipEntries.contains(existingFile)) {
-                Path fileToDelete = destination.resolve(existingFile).normalize();
-                if (Files.exists(fileToDelete)) {
-                    try {
-                        Files.delete(fileToDelete);
-                        LOGGER.info("Removed outdated file: " + existingFile);
-                    } catch (Exception e) {
-                        // Locked by game? Rename to .deleted so it's ignored on next load
-                        Path renamed = fileToDelete.resolveSibling(fileToDelete.getFileName().toString() + ".deleted");
-                        Files.move(fileToDelete, renamed, StandardCopyOption.REPLACE_EXISTING);
-                        renamed.toFile().deleteOnExit();
-                        LOGGER.info("Locked file renamed to .deleted: " + existingFile);
+        // Open the archive as a ZipFile for rapid header access
+        try (ZipFile zip = new ZipFile(zipFilePath.toFile())) {
+            Enumeration<? extends ZipEntry> entries = zip.entries();
+
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                if (entry.isDirectory()) continue;
+
+                String entryName = entry.getName();
+                zipEntries.add(entryName);
+
+                Path targetFile = destination.resolve(entryName).normalize();
+
+                // Convert the embedded CRC to a standard hex string
+                String serverCrc = Long.toHexString(entry.getCrc());
+
+                // Robust check: missing on disk, missing in json, OR content hashes don't match
+                boolean needsUpdate = !Files.exists(targetFile)
+                        || !oldChecksums.containsKey(entryName)
+                        || !oldChecksums.get(entryName).equals(serverCrc);
+
+                if (needsUpdate) {
+                    LOGGER.info("Updating/Extracting file: {}", entryName);
+
+                    if (targetFile.getParent() != null) {
+                        Files.createDirectories(targetFile.getParent());
                     }
+
+                    // Direct target stream copy
+                    try (InputStream is = zip.getInputStream(entry)) {
+                        Files.copy(is, targetFile, StandardCopyOption.REPLACE_EXISTING);
+                    }
+
+                    oldChecksums.put(entryName, serverCrc);
                 }
             }
         }
 
-        // 4. VERIFICATION PHASE: Only check files that exist in the server ZIP
-        for (String mod : zipEntries) {
-            Path file = destination.resolve(mod).normalize();
-            if (Files.exists(file)) {
-                String currentChecksum = computeChecksum(file);
-                if (!oldChecksums.containsKey(mod)) {
-                    LOGGER.info("New server file detected: " + mod);
-                } else if (!currentChecksum.equals(oldChecksums.get(mod))) {
-                    LOGGER.info("Modified server file: " + mod);
-                }
+        // Handle removals
+        for (String oldFile : new HashSet<>(oldChecksums.keySet())) {
+            if (!zipEntries.contains(oldFile)) {
+                LOGGER.info("File {} removed from server package. Deleting locally.", oldFile);
+                Files.deleteIfExists(destination.resolve(oldFile).normalize());
+                oldChecksums.remove(oldFile);
             }
         }
+
+        // Save progress manifest
+        Files.writeString(checksumFile, gson.toJson(oldChecksums));
     }
 }
