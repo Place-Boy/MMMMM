@@ -6,10 +6,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.multiplayer.ServerSelectionList;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -25,9 +27,17 @@ public abstract class MultiplayerScreenMixin extends Screen {
         super(title);
     }
 
+    @Shadow
+    protected ServerSelectionList serverSelectionList;
+
     @Inject(method = "init", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
         this.mmmmm$addCustomButtons();
+
+        JoinMultiplayerScreen screen = (JoinMultiplayerScreen) (Object) this;
+
+        this.serverSelectionList.setWidth(screen.width - 120);
+        this.serverSelectionList.setX((screen.width - (screen.width - 120)) / 2);
     }
 
     @Inject(method = "repositionElements", at = @At("TAIL"))
