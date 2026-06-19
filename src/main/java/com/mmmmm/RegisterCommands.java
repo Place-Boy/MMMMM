@@ -1,27 +1,30 @@
 package com.mmmmm;
 
-import com.google.gson.JsonParser;
+import com.google.common.reflect.TypeToken;
+import com.google.gson.*;
 import com.moandjiezana.toml.Toml;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Reader;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,9 +35,11 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 import java.util.stream.Collectors;
 
+
 public class RegisterCommands {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RegisterCommands.class);
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     // Use a single executor across runs
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -66,7 +71,6 @@ public class RegisterCommands {
                 .then(Commands.literal("save-all")
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> {
-                            saveModsToZip();
                             saveAllToZip();
                             context.getSource().sendSuccess(
                                     () -> Component.literal("Zipping mods... check console for progress."),
@@ -75,10 +79,84 @@ public class RegisterCommands {
                             return 1;
                         })
                 )
+                .then(Commands.literal("auto-filter")
+                        .requires(source -> source.hasPermission(2))
+                        .executes(context -> {
+                            Config.filterServerSideMods = !Config.filterServerSideMods;
+                            context.getSource().sendSuccess(
+                                    () -> Component.literal("Filter server-side mods: " + Config.filterServerSideMods),
+                                    true
+                            );
+                            return 1;
+                        })
+                )
+                .then(Commands.literal("filter-status")
+                        .requires(source -> source.hasPermission(2))
+                        .executes(context -> {
+                            context.getSource().sendSuccess(
+                                    () -> Component.literal("Filter server-side mods: " + Config.filterServerSideMods),
+                                    true
+                            );
+                            return 1;
+                        })
+                )
+                .then(Commands.literal("filter")
+                        .then(Commands.literal("add")
+                                .then(Commands.argument("modName", StringArgumentType.greedyString())
+                                        .requires(source -> source.hasPermission(2))
+                                        .executes(context -> {
+                                                    String modName = StringArgumentType.getString(context, "modName");
+                                                    addToFilter(modName);
+                                                    context.getSource().sendSuccess(
+                                                            () -> Component.literal("Added to filter: " + modName),
+                                                            true
+                                                    );
+                                                    return 1;
+                                                }
+                                        )
+                                )
+                                .then(Commands.literal("remove")
+                                        .then(Commands.argument("modName", StringArgumentType.greedyString())
+                                                .requires(source -> source.hasPermission(2))
+                                                .executes(context -> {
+                                                            String modName = StringArgumentType.getString(context, "modName");
+                                                            removeFromFilter(modName);
+                                                            context.getSource().sendSuccess(
+                                                                    () -> Component.literal("Removed from filter: " + modName),
+                                                                    true
+                                                            );
+                                                            return 1;
+                                                        }
+                                                )
+                                        )
+                                )
+                        )
+                )
         );
     }
 
-    public static void saveAllToZip(){
+    public static void addToFilter(String modName) {
+        Path filter = Path.of("MMMMM", "shared-files", "filter.json");
+        List<String> filteredMods = new ArrayList<>();
+
+        try{
+            if (filter.getParent() != null) {
+                Files.createDirectories(filter.getParent());
+            }
+
+            if (Files.exists(filter)) {
+                try (Reader reader = Files.newBufferedReader(filter)) {
+                    List<String> existing = GSON.fromJson(reader, new TypeToken<List<String>>(){}.getType());
+                }
+            }
+        }
+    }
+
+    public static void removeFromFilter(String modName) {
+
+    }
+
+    public static void saveAllToZip() {
         executor.execute(() -> {
             saveModsToZip();
             saveFolderToZip(Path.of("config"), Path.of("MMMMM", "shared-files", "config.zip"));
@@ -233,7 +311,6 @@ public class RegisterCommands {
         return jarPath.getFileName().toString();
     }
 
-
     private static boolean isServerOnlyMod(String modName) {
         if (modrinthCache.containsKey(modName)) {
             return modrinthCache.get(modName);
@@ -241,7 +318,7 @@ public class RegisterCommands {
 
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.modrinth.com/v2/search?query=" + URLEncoder.encode(modName, "UTF-8")))
+                    .uri(URI.create("https://api.modrinth.com/v2/search?query=" + URLEncoder.encode(modName, StandardCharsets.UTF_8)))
                     .header("User-Agent", "Place-Boy/https://github.com/Place-Boy/MMMMM/1.0.1-beta")
                     .GET()
                     .build();
