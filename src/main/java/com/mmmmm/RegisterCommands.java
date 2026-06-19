@@ -5,8 +5,10 @@ import com.google.gson.*;
 import com.moandjiezana.toml.Toml;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.slf4j.Logger;
@@ -15,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.io.Writer;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -68,6 +71,42 @@ public class RegisterCommands {
                             return 1;
                         })
                 )
+                .then(Commands.literal("ip")
+                        .executes(context -> {
+                            var connection = Minecraft.getInstance().getConnection();
+                            if (connection != null) {
+                                ServerData data = connection.getServerData();
+                                int port = Config.fileServerPort;
+                                String ip = (data != null) ? data.ip : "127.0.0.1";
+
+                                String fullAddress = ip + ":" + port;
+
+                                // 1. Create the clickable IP component
+                                var ipComponent = net.minecraft.network.chat.Component.literal(fullAddress)
+                                        .withStyle(style -> style
+                                                // Makes it copy to clipboard on click
+                                                .withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                                                        net.minecraft.network.chat.ClickEvent.Action.COPY_TO_CLIPBOARD, fullAddress))
+                                                // Shows a tooltip when hovering
+                                                .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
+                                                        net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                                                        net.minecraft.network.chat.Component.literal("§eClick to copy to clipboard")))
+                                                // Colors it aqua and underlines it like a link
+                                                .withColor(net.minecraft.ChatFormatting.AQUA)
+                                                .withUnderlined(true)
+                                        );
+
+                                // 2. Combine the prefix text with the clickable link
+                                var message = net.minecraft.network.chat.Component.literal("MMMMM Address: ").append(ipComponent);
+
+                                // 3. Send it to the player
+                                if (Minecraft.getInstance().player != null) {
+                                    Minecraft.getInstance().player.sendSystemMessage(message);
+                                }
+                            }
+                            return 1;
+                        })
+                )
                 .then(Commands.literal("save-all")
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> {
@@ -101,9 +140,9 @@ public class RegisterCommands {
                         })
                 )
                 .then(Commands.literal("filter")
+                        .requires(source -> source.hasPermission(2))
                         .then(Commands.literal("add")
                                 .then(Commands.argument("modName", StringArgumentType.greedyString())
-                                        .requires(source -> source.hasPermission(2))
                                         .executes(context -> {
                                                     String modName = StringArgumentType.getString(context, "modName");
                                                     addToFilter(modName);
@@ -115,23 +154,23 @@ public class RegisterCommands {
                                                 }
                                         )
                                 )
-                                .then(Commands.literal("remove")
-                                        .then(Commands.argument("modName", StringArgumentType.greedyString())
-                                                .requires(source -> source.hasPermission(2))
-                                                .executes(context -> {
-                                                            String modName = StringArgumentType.getString(context, "modName");
-                                                            removeFromFilter(modName);
-                                                            context.getSource().sendSuccess(
-                                                                    () -> Component.literal("Removed from filter: " + modName),
-                                                                    true
-                                                            );
-                                                            return 1;
-                                                        }
-                                                )
+                        )
+                        .then(Commands.literal("remove")
+                                .then(Commands.argument("modName", StringArgumentType.greedyString())
+                                        .executes(context -> {
+                                                    String modName = StringArgumentType.getString(context, "modName");
+                                                    removeFromFilter(modName);
+                                                    context.getSource().sendSuccess(
+                                                            () -> Component.literal("Removed from filter: " + modName),
+                                                            true
+                                                    );
+                                                    return 1;
+                                                }
                                         )
                                 )
                         )
                 )
+
         );
     }
 
@@ -139,21 +178,75 @@ public class RegisterCommands {
         Path filter = Path.of("MMMMM", "shared-files", "filter.json");
         List<String> filteredMods = new ArrayList<>();
 
-        try{
+        try {
             if (filter.getParent() != null) {
                 Files.createDirectories(filter.getParent());
             }
 
             if (Files.exists(filter)) {
                 try (Reader reader = Files.newBufferedReader(filter)) {
-                    List<String> existing = GSON.fromJson(reader, new TypeToken<List<String>>(){}.getType());
+                    List<String> existing = GSON.fromJson(reader, new TypeToken<List<String>>() {
+                    }.getType());
+                    if (existing != null) {
+                        filteredMods.addAll(existing);
+                    }
                 }
             }
+
+            if (!filteredMods.contains(modName)) {
+                filteredMods.add(modName);
+            }
+
+            try (Writer writer = Files.newBufferedWriter(filter)) {
+                GSON.toJson(filteredMods, writer);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     public static void removeFromFilter(String modName) {
+        Path filter = Path.of("MMMMM", "shared-files", "filter.json");
+        List<String> filteredMods = new ArrayList<>();
 
+        try {
+            if (filter.getParent() != null) {
+                Files.createDirectories(filter.getParent());
+            }
+
+            if (Files.exists(filter)) {
+                try (Reader reader = Files.newBufferedReader(filter)) {
+                    List<String> existing = GSON.fromJson(reader, new TypeToken<List<String>>() {
+                    }.getType());
+                    if (existing != null) {
+                        filteredMods.addAll(existing);
+                    }
+                }
+            }
+
+            filteredMods.remove(modName);
+
+            try (Writer writer = Files.newBufferedWriter(filter)) {
+                GSON.toJson(filteredMods, writer);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static List<String> loadFilterList() {
+        Path filterPath = Path.of("MMMMM", "shared-files", "filter.json");
+        if (!Files.exists(filterPath)) {
+            return new ArrayList<>();
+        }
+        try (Reader reader = Files.newBufferedReader(filterPath)) {
+            List<String> list = GSON.fromJson(reader, new TypeToken<List<String>>() {
+            }.getType());
+            return list != null ? list : new ArrayList<>();
+        } catch (IOException e) {
+            LOGGER.error("Failed to read filter.json", e);
+            return new ArrayList<>();
+        }
     }
 
     public static void saveAllToZip() {
@@ -250,12 +343,23 @@ public class RegisterCommands {
                     int total = modFiles.size();
                     int index = 0;
 
+                    List<String> userFilteredMods = loadFilterList();
+
                     for (Path path : modFiles) {
                         index++;
                         try {
                             String modName = getModNameFromJar(path);
                             if (modName != null) {
-                                boolean exclude = Config.filterServerSideMods && isServerOnlyMod(modName);
+
+                                // Check Modrinth API filter (if turned on)
+                                boolean isServerOnly = Config.filterServerSideMods && isServerOnlyMod(modName);
+
+                                // Check JSON filter (Matches exact name OR jar name like "jei-1.20.jar")
+                                boolean isUserFiltered = userFilteredMods.contains(modName) || userFilteredMods.contains(path.getFileName().toString());
+
+                                // Exclude if either filter catches it
+                                boolean exclude = isServerOnly || isUserFiltered;
+
                                 if (!exclude) {
                                     Path relativePath = modsFolder.relativize(path);
                                     ZipEntry zipEntry = new ZipEntry(relativePath.toString());
@@ -263,15 +367,12 @@ public class RegisterCommands {
                                     Files.copy(path, zipOut);
                                     zipOut.closeEntry();
 
-                                    LOGGER.info("[{}/{}] Included mod: {} ({})",
-                                            index, total, modName, path.getFileName());
+                                    LOGGER.info("[{}/{}] Included mod: {} ({})", index, total, modName, path.getFileName());
                                 } else {
-                                    LOGGER.info("[{}/{}] Excluded mod: {} ({})",
-                                            index, total, modName, path.getFileName());
+                                    LOGGER.info("[{}/{}] Excluded mod: {} ({}) [Reason: Custom Filter or Server-Side]", index, total, modName, path.getFileName());
                                 }
                             } else {
-                                LOGGER.warn("[{}/{}] Could not identify mod: {}",
-                                        index, total, path.getFileName());
+                                LOGGER.warn("[{}/{}] Could not identify mod: {}", index, total, path.getFileName());
                             }
                         } catch (Exception e) {
                             LOGGER.error("Failed to process mod: " + path, e);
