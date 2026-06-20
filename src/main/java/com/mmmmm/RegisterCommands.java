@@ -5,12 +5,17 @@ import com.google.gson.*;
 import com.moandjiezana.toml.Toml;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,11 +53,18 @@ public class RegisterCommands {
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private static final HttpClient httpClient = HttpClient.newHttpClient();
 
+    private static String cachedPublicIp = "Loading...";
+
     // Cache Modrinth lookups
     private static final Map<String, Boolean> modrinthCache = new HashMap<>();
 
     // Track last build time to avoid unnecessary zips
     private static FileTime lastBuildTime = FileTime.fromMillis(0);
+
+    @SubscribeEvent
+    public static void onServerStarting(ServerStartingEvent event) {
+        fetchPublicIpAsync();
+    }
 
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         LOGGER.info("Registering server commands...");
@@ -73,37 +85,22 @@ public class RegisterCommands {
                 )
                 .then(Commands.literal("ip")
                         .executes(context -> {
-                            var connection = Minecraft.getInstance().getConnection();
-                            if (connection != null) {
-                                ServerData data = connection.getServerData();
-                                int port = Config.fileServerPort;
-                                String ip = (data != null) ? data.ip : "127.0.0.1";
+                            CommandSourceStack source = context.getSource();
 
-                                String fullAddress = ip + ":" + port;
+                            int port = Config.fileServerPort;
+                            String fullAddress = cachedPublicIp + ":" + port;
 
-                                // 1. Create the clickable IP component
-                                var ipComponent = net.minecraft.network.chat.Component.literal(fullAddress)
-                                        .withStyle(style -> style
-                                                // Makes it copy to clipboard on click
-                                                .withClickEvent(new net.minecraft.network.chat.ClickEvent(
-                                                        net.minecraft.network.chat.ClickEvent.Action.COPY_TO_CLIPBOARD, fullAddress))
-                                                // Shows a tooltip when hovering
-                                                .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
-                                                        net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
-                                                        net.minecraft.network.chat.Component.literal("§eClick to copy to clipboard")))
-                                                // Colors it aqua and underlines it like a link
-                                                .withColor(net.minecraft.ChatFormatting.AQUA)
-                                                .withUnderlined(true)
-                                        );
+                            var ipComponent = Component.literal(fullAddress)
+                                    .withStyle(style -> style
+                                            .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, fullAddress))
+                                            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("§eClick to copy to clipboard")))
+                                            .withColor(ChatFormatting.AQUA)
+                                            .withUnderlined(true)
+                                    );
 
-                                // 2. Combine the prefix text with the clickable link
-                                var message = net.minecraft.network.chat.Component.literal("MMMMM Address: ").append(ipComponent);
+                            var message = Component.literal("Server Address: ").append(ipComponent);
 
-                                // 3. Send it to the player
-                                if (Minecraft.getInstance().player != null) {
-                                    Minecraft.getInstance().player.sendSystemMessage(message);
-                                }
-                            }
+                            source.sendSuccess(() -> message, false);
                             return 1;
                         })
                 )
@@ -172,6 +169,31 @@ public class RegisterCommands {
                 )
 
         );
+    }
+
+    public static void fetchPublicIpAsync() {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://checkip.amazonaws.com")) // Trusted text-only IP service
+                    .timeout(java.time.Duration.ofSeconds(5))
+                    .build();
+
+            // .sendAsync pushes this request out of Minecraft's main loop entirely
+            client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenApply(HttpResponse::body)
+                    .thenAccept(ip -> {
+                        // .trim() removes any sneaky hidden newlines (\n) returned by the web request
+                        cachedPublicIp = ip.trim();
+                    })
+                    .exceptionally(ex -> {
+                        // If the server has no internet or the API is down, fallback gracefully
+                        cachedPublicIp = "127.0.0.1";
+                        return null;
+                    });
+        } catch (Exception e) {
+            cachedPublicIp = "127.0.0.1";
+        }
     }
 
     public static void addToFilter(String modName) {

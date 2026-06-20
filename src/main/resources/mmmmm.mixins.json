@@ -2,11 +2,9 @@
   "required": true,
   "package": "com.mmmmm.mixin",
   "compatibilityLevel": "JAVA_21",
-  "mixins": [
-    "ScreenAccessorMixin"
-  ],
   "client": [
     "EditServerScreenMixin",
-    "EditServerScreenAccessor"
+    "EditServerScreenAccessor",
+    "ScreenAccessorMixin"
   ]
 }

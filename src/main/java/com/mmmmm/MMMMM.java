@@ -25,5 +25,6 @@ public class MMMMM {
         LOGGER.info("MMMMM initialized.");
 
         NeoForge.EVENT_BUS.addListener(RegisterCommands::onRegisterCommands);
+        RegisterCommands.fetchPublicIpAsync();
     }
 }
