@@ -2,88 +2,241 @@ package com.mmmmm.client;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
 
 public class DownloadProgressScreen extends Screen {
 
-    private final String serverUpdateIP; // Use the correct server update IP
-    private int progress = 0; // Progress percentage (0-100)
-    private String downloadSpeed = "0 KB/s"; // Download speed
-    private Button cancelButton; // Cancel button
+    private final String serverUpdateIP;
 
+    // Progress / extraction state
+    private int progress = 0;
+    private String downloadSpeed = "0 KB/s";
+    private String estimatedTimeRemaining = "";
+    private boolean isExtracting = false;
+    private String extractionMessage = "";
 
-    public DownloadProgressScreen(String serverIP) {
-        super(Component.literal("Downloading Mods"));
-        this.serverUpdateIP = serverIP; // Set the correct server update IP
+    // Separate status line shown while downloading (so we can still render live speed/ETA)
+    private String downloadStatusMessage = "";
+
+    // Flow state: false = selection step, true = progress step
+    private boolean selectionConfirmed = false;
+    private volatile boolean isCancelled = false;
+
+    // Widgets
+    private Button cancelButton;
+    private Button startDownloadButton;
+    private Checkbox configCheckbox;
+    private Checkbox kubejsCheckbox;
+    private Checkbox modsCheckbox;
+
+    // Selections
+    private boolean downloadConfig = true;
+    private boolean downloadKubejs = true;
+    private boolean downloadMods = true;
+
+    // Callback that the client code can use to start the download with the chosen options
+    @FunctionalInterface
+    public interface DownloadStarter {
+        void start(boolean config, boolean kubejs, boolean mods, DownloadProgressScreen screen);
     }
 
-    private volatile boolean isCancelled = false;
+    private final DownloadStarter downloadStarter;
+
+    public DownloadProgressScreen(String serverIP, DownloadStarter downloadStarter) {
+        super(Component.literal("Downloading Mods"));
+        this.serverUpdateIP = serverIP;
+        this.downloadStarter = downloadStarter;
+    }
 
     @Override
     protected void init() {
         super.init();
+        this.clearWidgets();
 
+        if (!selectionConfirmed) {
+            initSelectionWidgets();
+        } else {
+            initProgressWidgets();
+        }
+    }
+
+    private void initSelectionWidgets() {
+        int checkboxWidth = 150;
+        int checkboxHeight = 20; // 1.20.1 checkboxes are usually 20x20 visually, but width/height bounds are required
+        int startY = this.height / 2 - 40;
+        int centerX = this.width / 2 - checkboxWidth / 2;
+
+        // Config checkbox
+        configCheckbox = this.addRenderableWidget(new Checkbox(
+                centerX, startY, checkboxWidth, checkboxHeight,
+                Component.literal("Download config"), downloadConfig
+        ) {
+            @Override
+            public void onPress() {
+                super.onPress(); // Toggles the internal 'selected' boolean automatically
+                downloadConfig = this.selected(); // Syncs it back to your variable
+            }
+        });
+
+        // KubeJS checkbox
+        kubejsCheckbox = this.addRenderableWidget(new Checkbox(
+                centerX, startY + 20, checkboxWidth, checkboxHeight,
+                Component.literal("Download kubejs"), downloadKubejs
+        ) {
+            @Override
+            public void onPress() {
+                super.onPress();
+                downloadKubejs = this.selected();
+            }
+        });
+
+        // Mods checkbox
+        modsCheckbox = this.addRenderableWidget(new Checkbox(
+                centerX, startY + 40, checkboxWidth, checkboxHeight,
+                Component.literal("Download mods"), downloadMods
+        ) {
+            @Override
+            public void onPress() {
+                super.onPress();
+                downloadMods = this.selected();
+            }
+        });
+
+        int buttonWidth = 120;
+        int buttonHeight = 20;
+        int buttonX = (this.width - buttonWidth) / 2;
+        int buttonY = startY + 70;
+
+        startDownloadButton = Button.builder(Component.literal("Start Download"), (button) -> {
+            downloadConfig = configCheckbox.selected();
+            downloadKubejs = kubejsCheckbox.selected();
+            downloadMods = modsCheckbox.selected();
+
+            // Require at least one selection
+            if (!downloadConfig && !downloadKubejs && !downloadMods) {
+                return;
+            }
+
+            selectionConfirmed = true;
+            this.init();
+
+            if (downloadStarter != null) {
+                downloadStarter.start(downloadConfig, downloadKubejs, downloadMods, this);
+            }
+        }).bounds(buttonX, buttonY, buttonWidth, buttonHeight).build();
+
+        this.addRenderableWidget(configCheckbox);
+        this.addRenderableWidget(kubejsCheckbox);
+        this.addRenderableWidget(modsCheckbox);
+        this.addRenderableWidget(startDownloadButton);
+
+        // Cancel button in selection step
+        int cancelWidth = 100;
+        int cancelHeight = 20;
+        int cancelX = (this.width - cancelWidth) / 2;
+        int cancelY = buttonY + 30;
+
+        cancelButton = Button.builder(Component.literal("Cancel"), (button) -> {
+            isCancelled = true;
+            minecraft.execute(() -> minecraft.setScreen(new TitleScreen()));
+        }).bounds(cancelX, cancelY, cancelWidth, cancelHeight).build();
+
+        this.addRenderableWidget(cancelButton);
+    }
+
+    private void initProgressWidgets() {
         int buttonWidth = 100;
         int buttonHeight = 20;
         int buttonX = (this.width - buttonWidth) / 2;
         int buttonY = (this.height / 2) + 50;
 
         cancelButton = Button.builder(Component.literal("Cancel"), (button) -> {
-            isCancelled = true; // Signal cancellation
-            minecraft.execute(() -> minecraft.setScreen(new TitleScreen())); // Return to the title screen
+            isCancelled = true;
+            minecraft.execute(() -> minecraft.setScreen(new TitleScreen()));
         }).bounds(buttonX, buttonY, buttonWidth, buttonHeight).build();
 
         this.addRenderableWidget(cancelButton);
     }
 
-    /**
-     * Checks if the download has been cancelled.
-     */
     public boolean isCancelled() {
         return isCancelled;
+    }
+
+    public boolean shouldDownloadConfig() {
+        return downloadConfig;
+    }
+
+    public boolean shouldDownloadKubejs() {
+        return downloadKubejs;
+    }
+
+    public boolean shouldDownloadMods() {
+        return downloadMods;
+    }
+
+    public void updateProgress(int progress, String downloadSpeed, String estimatedTimeRemaining) {
+        this.progress = Math.min(100, Math.max(0, progress));
+        this.downloadSpeed = downloadSpeed;
+        this.estimatedTimeRemaining = estimatedTimeRemaining;
+    }
+
+    /**
+     * Update the status line shown during the download phase (does not hide speed/ETA).
+     */
+    public void setDownloadStatus(String message) {
+        this.downloadStatusMessage = message == null ? "" : message;
+        this.isExtracting = false;
+    }
+
+    public void startExtraction(String extractionMessage) {
+        this.isExtracting = true;
+        // Keep extraction UI separate from the download speed UI so the screen can
+        // show the *current* download speed while downloading.
+        this.extractionMessage = extractionMessage;
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         this.renderBackground(guiGraphics);
-
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
 
-        // Draw the title with the correct server update IP
-        guiGraphics.drawCenteredString(this.font, "Downloading mods from " + serverUpdateIP, this.width / 2, 20, 0xFFFFFF);
+        guiGraphics.drawCenteredString(
+                this.font,
+                selectionConfirmed
+                        ? "Downloading from " + serverUpdateIP
+                        : "Select what to download from " + serverUpdateIP,
+                this.width / 2,
+                20,
+                0xFFFFFF
+        );
 
+        if (!selectionConfirmed) {
+            return;
+        }
 
-        // Draw the download speed above the progress bar
         int barWidth = 200;
         int barHeight = 20;
         int barX = (this.width - barWidth) / 2;
         int barY = this.height / 2;
 
-        guiGraphics.drawCenteredString(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFF);
+        if (isExtracting) {
+            guiGraphics.drawCenteredString(this.font, extractionMessage, this.width / 2, barY - 30, 0xFFFFFF);
+        } else {
+            if (!downloadStatusMessage.isBlank()) {
+                guiGraphics.drawCenteredString(this.font, downloadStatusMessage, this.width / 2, barY - 55, 0xFFFFFF);
+            }
+            guiGraphics.drawCenteredString(this.font, downloadSpeed, this.width / 2, barY - 30, 0xFFFFFF);
+            if (!estimatedTimeRemaining.isEmpty()) {
+                guiGraphics.drawCenteredString(this.font, "ETA: " + estimatedTimeRemaining, this.width / 2, barY - 80, 0xFFFFFF);
+            }
+        }
 
-        // Draw the progress bar background
-        guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFFAAAAAA); // Gray background
-
-        // Draw the progress bar foreground
+        guiGraphics.fill(barX, barY, barX + barWidth, barY + barHeight, 0xFFAAAAAA);
         int progressWidth = (int) (barWidth * (progress / 100.0));
-        guiGraphics.fill(barX, barY, barX + progressWidth, barY + barHeight, 0xFF00FF00); // Green foreground
-
-        // Draw the progress percentage
+        guiGraphics.fill(barX, barY, barX + progressWidth, barY + barHeight, 0xFF00FF00);
         guiGraphics.drawCenteredString(this.font, progress + "%", this.width / 2, barY + 5, 0xFFFFFF);
-
-        // The cancel button is already positioned below the progress bar in the `init` method
-    }
-
-    /**
-     * Updates the progress bar and download speed.
-     *
-     * @param progress      The current progress (0-100).
-     * @param downloadSpeed The current download speed in KB/s.
-     */
-    public void updateProgress(int progress, String downloadSpeed) {
-        this.progress = Math.min(100, Math.max(0, progress)); // Clamp progress between 0 and 100
-        this.downloadSpeed = downloadSpeed;
     }
 }

@@ -1,81 +1,90 @@
 package com.mmmmm;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.util.HexFormat;
+import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.Enumeration;
 
-/**
- * Utility class for computing file checksums.
- */
 public class Checksum {
 
-    /**
-     * Computes the SHA-256 checksum of a file.
-     *
-     * @param filePath The path to the file.
-     * @return The computed checksum as a hexadecimal string.
-     * @throws Exception If an error occurs while reading the file or computing the checksum.
-     */
-    public static String computeChecksum(Path filePath) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] fileBytes = Files.readAllBytes(filePath);
-        byte[] hashBytes = digest.digest(fileBytes);
-        return HexFormat.of().formatHex(hashBytes);
-    }
+    private static final Logger LOGGER = LoggerFactory.getLogger(Checksum.class);
 
-    public static void saveChecksums(Path modsDirectory, Path checksumFile) throws Exception {
-        Map<String, String> checksums = Files.list(modsDirectory)
-                .filter(Files::isRegularFile)
-                .collect(Collectors.toMap(
-                        path -> path.getFileName().toString(),
-                        path -> {
-                            try {
-                                return computeChecksum(path);
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-                ));
+    public static void compareChecksums(Path zipFilePath, Path destination, Path checksumFile) throws Exception {
+        Gson gson = new Gson();
+        Type mapType = new TypeToken<Map<String, String>>() {}.getType();
 
-        Files.writeString(checksumFile, new Gson().toJson(checksums));
-    }
-
-    public static void compareChecksums(Path modsDirectory, Path checksumFile) throws Exception {
-        // Load previous checksums
-        Map<String, String> oldChecksums = new Gson().fromJson(Files.readString(checksumFile), Map.class);
-
-        // Compute new checksums
-        Map<String, String> newChecksums = Files.list(modsDirectory)
-                .filter(Files::isRegularFile)
-                .collect(Collectors.toMap(
-                        path -> path.getFileName().toString(),
-                        path -> {
-                            try {
-                                return computeChecksum(path);
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-                ));
-
-        // Compare checksums
-        for (String mod : newChecksums.keySet()) {
-            if (!oldChecksums.containsKey(mod)) {
-                System.out.println("Added: " + mod);
-            } else if (!newChecksums.get(mod).equals(oldChecksums.get(mod))) {
-                System.out.println("Modified: " + mod);
+        // Ensure we load a mutable map
+        Map<String, String> oldChecksums = new HashMap<>();
+        if (Files.exists(checksumFile)) {
+            Map<String, String> loaded = gson.fromJson(Files.readString(checksumFile), mapType);
+            if (loaded != null) {
+                oldChecksums.putAll(loaded);
             }
         }
 
-        for (String mod : oldChecksums.keySet()) {
-            if (!newChecksums.containsKey(mod)) {
-                System.out.println("Removed: " + mod);
+        Set<String> zipEntries = new HashSet<>();
+
+        // Open the archive as a ZipFile for rapid header access
+        try (ZipFile zip = new ZipFile(zipFilePath.toFile())) {
+            Enumeration<? extends ZipEntry> entries = zip.entries();
+
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                if (entry.isDirectory()) continue;
+
+                String entryName = entry.getName();
+                zipEntries.add(entryName);
+
+                Path targetFile = destination.resolve(entryName).normalize();
+
+                // Convert the embedded CRC to a standard hex string
+                String serverCrc = Long.toHexString(entry.getCrc());
+
+                // Robust check: missing on disk, missing in json, OR content hashes don't match
+                boolean needsUpdate = !Files.exists(targetFile)
+                        || !oldChecksums.containsKey(entryName)
+                        || !oldChecksums.get(entryName).equals(serverCrc);
+
+                if (needsUpdate) {
+                    LOGGER.info("Updating/Extracting file: {}", entryName);
+
+                    if (targetFile.getParent() != null) {
+                        Files.createDirectories(targetFile.getParent());
+                    }
+
+                    // Direct target stream copy
+                    try (InputStream is = zip.getInputStream(entry)) {
+                        Files.copy(is, targetFile, StandardCopyOption.REPLACE_EXISTING);
+                    }
+
+                    oldChecksums.put(entryName, serverCrc);
+                }
             }
         }
+
+        // Handle removals
+        for (String oldFile : new HashSet<>(oldChecksums.keySet())) {
+            if (!zipEntries.contains(oldFile)) {
+                LOGGER.info("File {} removed from server package. Deleting locally.", oldFile);
+                Files.deleteIfExists(destination.resolve(oldFile).normalize());
+                oldChecksums.remove(oldFile);
+            }
+        }
+
+        // Save progress manifest
+        Files.writeString(checksumFile, gson.toJson(oldChecksums));
     }
 }

@@ -2,4 +2,11 @@
 #Default: 8080
 #Range: 1 ~ 65535
 fileServerPort = 8080
+#Enable or disable mod filtering
+#Default: true
+enableModFiltering = true
+#If enableModFiltering is true, exclude mods detected as server-only via Modrinth metadata search.
+#Server-only detection: client_side == unsupported AND server_side == required.
+#Default: false
+filterServerSideMods = false
 

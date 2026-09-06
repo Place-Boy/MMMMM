@@ -1,94 +1,110 @@
-[01Jan2026 21:05:33.104] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeclientuserdev, --version, MOD_DEV, --assetIndex, 5, --assetsDir, C:\Users\tomgt\.gradle\caches\forge_gradle\assets, --gameDir, ., --fml.forgeVersion, 47.4.0, --fml.mcVersion, 1.20.1, --fml.forgeGroup, net.minecraftforge, --fml.mcpVersion, 20230612.114412, --mixin.config, mmmmm.mixin.json]
-[01Jan2026 21:05:33.127] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher 10.0.9+10.0.9+main.dcd20f30 starting: java version 17.0.10 by Oracle Corporation; OS Windows 11 arch amd64 version 10.0
-[01Jan2026 21:05:33.325] [main/INFO] [net.minecraftforge.fml.loading.ImmediateWindowHandler/]: Loading ImmediateWindowProvider fmlearlywindow
-[01Jan2026 21:05:33.518] [main/INFO] [EARLYDISPLAY/]: Trying GL version 4.6
-[01Jan2026 21:05:33.519] [main/INFO] [EARLYDISPLAY/]: If this message is the only thing at the bottom of your log before a crash, you probably have a driver issue.
-
-Possible solutions:
-A) Make sure Minecraft is set to prefer high performance graphics in the OS and/or driver control panel
-B) Check for driver updates on the graphics brand's website
-C) Try reinstalling your graphics drivers
-D) If still not working after trying all of the above, ask for further help on the Forge forums or Discord
-
-You can safely ignore this message if the game starts up successfully.
-[01Jan2026 21:05:34.079] [main/INFO] [EARLYDISPLAY/]: Requested GL version 4.6 got version 4.6
-[01Jan2026 21:05:34.351] [pool-2-thread-1/INFO] [EARLYDISPLAY/]: GL info: Intel(R) Iris(R) Xe Graphics GL version 4.6.0 - Build 31.0.101.4314, Intel
-[01Jan2026 21:05:34.361] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.5 Source=union:/C:/Users/tomgt/.gradle/caches/modules-2/files-2.1/org.spongepowered/mixin/0.8.5/9d1c0c3a304ae6697ecd477218fa61b850bf57fc/mixin-0.8.5.jar%23128!/ Service=ModLauncher Env=CLIENT
-[01Jan2026 21:05:35.018] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file C:\Users\tomgt\.gradle\caches\modules-2\files-2.1\net.minecraftforge\javafmllanguage\1.20.1-47.4.0\f0c0b352173d0a378cbdcec9cfc4ba65899a721\javafmllanguage-1.20.1-47.4.0.jar is missing mods.toml file
-[01Jan2026 21:05:35.023] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file C:\Users\tomgt\.gradle\caches\modules-2\files-2.1\net.minecraftforge\lowcodelanguage\1.20.1-47.4.0\e862740d8c84d08dbfedea412bef88fe42e727c5\lowcodelanguage-1.20.1-47.4.0.jar is missing mods.toml file
-[01Jan2026 21:05:35.031] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file C:\Users\tomgt\.gradle\caches\modules-2\files-2.1\net.minecraftforge\mclanguage\1.20.1-47.4.0\5719b3a297a33f877ed5dde4cb4bd75c859096af\mclanguage-1.20.1-47.4.0.jar is missing mods.toml file
-[01Jan2026 21:05:35.035] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file C:\Users\tomgt\.gradle\caches\modules-2\files-2.1\net.minecraftforge\fmlcore\1.20.1-47.4.0\235975dafa4309945b59c56b53f31dc5b65a6051\fmlcore-1.20.1-47.4.0.jar is missing mods.toml file
-[01Jan2026 21:05:35.211] [main/INFO] [net.minecraftforge.fml.loading.moddiscovery.JarInJarDependencyLocator/]: No dependencies to load found. Skipping!
-[01Jan2026 21:05:38.432] [main/INFO] [mixin/]: Compatibility level set to JAVA_17
-[01Jan2026 21:05:38.437] [main/INFO] [cpw.mods.modlauncher.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeclientuserdev' with arguments [--version, MOD_DEV, --gameDir, ., --assetsDir, C:\Users\tomgt\.gradle\caches\forge_gradle\assets, --assetIndex, 5]
-[01Jan2026 21:05:38.898] [main/WARN] [mixin/]: Reference map 'mmmmm.refmap.json' for mmmmm.mixin.json could not be read. If this is a development environment you can ignore this message
-[01Jan2026 21:06:18.255] [Datafixer Bootstrap/INFO] [com.mojang.datafixers.DataFixerBuilder/]: 188 Datafixer optimizations took 559 milliseconds
-[01Jan2026 21:06:29.411] [Render thread/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/C:/Users/tomgt/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.20.1-47.4.0_mapped_official_1.20.1/forge-1.20.1-47.4.0_mapped_official_1.20.1.jar%23191!/assets/.mcassetsroot' uses unexpected schema
-[01Jan2026 21:06:29.434] [Render thread/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/C:/Users/tomgt/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.20.1-47.4.0_mapped_official_1.20.1/forge-1.20.1-47.4.0_mapped_official_1.20.1.jar%23191!/data/.mcassetsroot' uses unexpected schema
-[01Jan2026 21:06:29.585] [Render thread/INFO] [com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService/]: Environment: authHost='https://authserver.mojang.com', accountsHost='https://api.mojang.com', sessionHost='https://sessionserver.mojang.com', servicesHost='https://api.minecraftservices.com', name='PROD'
-[01Jan2026 21:06:29.624] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Setting user: Dev
-[01Jan2026 21:06:30.509] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Backend library: LWJGL version 3.3.1 build 7
-[01Jan2026 21:06:33.786] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Initializing MMMMM...
-[01Jan2026 21:06:33.871] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Config class static block executed.
-[01Jan2026 21:06:33.886] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Registered config spec hash: -2085144804
-[01Jan2026 21:06:34.168] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: MMMMM initialized.
-[01Jan2026 21:06:34.178] [modloading-worker-0/INFO] [net.minecraftforge.common.ForgeMod/FORGEMOD]: Forge mod loading, version 47.4.0, for MC 1.20.1 with MCP 20230612.114412
-[01Jan2026 21:06:34.189] [modloading-worker-0/INFO] [net.minecraftforge.common.MinecraftForge/FORGE]: MinecraftForge v47.4.0 Initialized
-[01Jan2026 21:06:46.881] [Render thread/INFO] [net.minecraftforge.gametest.ForgeGameTestHooks/]: Enabled Gametest Namespaces: [examplemod]
-[01Jan2026 21:06:50.215] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources
-[01Jan2026 21:06:51.980] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Configuration file C:\Users\tomgt\Desktop\MMMMM\run\config\forge-client.toml is not correct. Correcting
-[01Jan2026 21:06:52.013] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Incorrect key client was corrected from null to its default, SimpleCommentedConfig:{}. 
-[01Jan2026 21:06:52.014] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Incorrect key client.alwaysSetupTerrainOffThread was corrected from null to its default, false. 
-[01Jan2026 21:06:52.016] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Incorrect key client.experimentalForgeLightPipelineEnabled was corrected from null to its default, false. 
-[01Jan2026 21:06:52.016] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Incorrect key client.showLoadWarnings was corrected from null to its default, true. 
-[01Jan2026 21:06:52.018] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Incorrect key client.useCombinedDepthStencilAttachment was corrected from null to its default, false. 
-[01Jan2026 21:06:52.018] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Incorrect key client.compressLanIPv6Addresses was corrected from null to its default, true. 
-[01Jan2026 21:06:52.018] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Incorrect key client.calculateAllNormals was corrected from null to its default, false. 
-[01Jan2026 21:06:52.018] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Incorrect key client.stabilizeDirectionGetNearest was corrected from null to its default, true. 
-[01Jan2026 21:06:52.020] [modloading-worker-0/WARN] [net.minecraftforge.common.ForgeConfigSpec/CORE]: Incorrect key client.allowMipmapLowering was corrected from null to its default, false. 
-[01Jan2026 21:06:52.110] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: onLoad fired for mod ID: mmmmm
-[01Jan2026 21:06:52.111] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Received config spec hash: -2085144804
-[01Jan2026 21:06:52.113] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Configuration loaded:
-[01Jan2026 21:06:52.125] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: File Server Port: 8080
-[01Jan2026 21:06:52.129] [Thread-3/INFO] [com.mmmmm.MMMMM/]: onReload fired for mod ID: mmmmm
-[01Jan2026 21:06:52.129] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Received config spec hash: -2085144804
-[01Jan2026 21:06:52.129] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Configuration reloaded:
-[01Jan2026 21:06:52.131] [Thread-3/INFO] [com.mmmmm.MMMMM/]: File Server Port: 8080
-[01Jan2026 21:06:52.147] [Thread-3/INFO] [com.mmmmm.MMMMM/]: onReload fired for mod ID: mmmmm
-[01Jan2026 21:06:52.147] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Received config spec hash: -2085144804
-[01Jan2026 21:06:52.147] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Configuration reloaded:
-[01Jan2026 21:06:52.149] [Thread-3/INFO] [com.mmmmm.MMMMM/]: File Server Port: 8080
-[01Jan2026 21:06:55.587] [Forge Version Check/INFO] [net.minecraftforge.fml.VersionChecker/]: [forge] Starting version check at https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json
-[01Jan2026 21:06:57.004] [Worker-Main-6/INFO] [net.minecraft.client.gui.font.providers.UnihexProvider/]: Found unifont_all_no_pua-15.0.06.hex, loading
-[01Jan2026 21:06:59.573] [Forge Version Check/INFO] [net.minecraftforge.fml.VersionChecker/]: [forge] Found status: OUTDATED Current: 47.4.0 Target: 47.4.10
-[01Jan2026 21:07:19.735] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: minecraft:item.goat_horn.play
-[01Jan2026 21:07:19.739] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
-[01Jan2026 21:07:20.293] [Render thread/INFO] [com.mojang.blaze3d.audio.Library/]: OpenAL initialized on device OpenAL Soft on Speakers (G935 Gaming Headset)
-[01Jan2026 21:07:20.300] [Render thread/INFO] [net.minecraft.client.sounds.SoundEngine/SOUNDS]: Sound engine started
-[01Jan2026 21:07:21.419] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
-[01Jan2026 21:07:22.167] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
-[01Jan2026 21:07:22.192] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
-[01Jan2026 21:07:22.277] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
-[01Jan2026 21:07:22.308] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
-[01Jan2026 21:07:22.751] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
-[01Jan2026 21:07:22.784] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
-[01Jan2026 21:07:22.803] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
-[01Jan2026 21:07:22.842] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
-[01Jan2026 21:07:27.438] [Render thread/WARN] [net.minecraft.client.renderer.ShaderInstance/]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
-[01Jan2026 21:07:29.147] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x0 minecraft:textures/atlas/particles.png-atlas
-[01Jan2026 21:07:29.344] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x0 minecraft:textures/atlas/paintings.png-atlas
-[01Jan2026 21:07:29.388] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x128x0 minecraft:textures/atlas/mob_effects.png-atlas
-[01Jan2026 21:07:32.101] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: onMultiplayerScreenInit fired
-[01Jan2026 21:07:32.251] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: onMultiplayerScreenInit fired
-[01Jan2026 21:07:39.030] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: onMultiplayerScreenInit fired
-[01Jan2026 21:07:39.059] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: onMultiplayerScreenInit fired
-[01Jan2026 21:07:39.060] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: onMultiplayerScreenInit fired
-[01Jan2026 21:07:39.872] [Realms Notification Availability checker #1/INFO] [com.mojang.realmsclient.client.RealmsClient/]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
-[01Jan2026 21:07:41.923] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: onMultiplayerScreenInit fired
-[01Jan2026 21:07:49.315] [Render thread/INFO] [com.mmmmm.RegisterCommands/]: Registering server commands...
-[01Jan2026 21:07:52.097] [Render thread/INFO] [net.minecraft.world.item.crafting.RecipeManager/]: Loaded 7 recipes
-[01Jan2026 21:07:52.914] [Render thread/INFO] [net.minecraft.advancements.AdvancementList/]: Loaded 1271 advancements
-[01Jan2026 21:07:56.884] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: onMultiplayerScreenInit fired
-[01Jan2026 21:07:57.910] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: onMultiplayerScreenInit fired
-[01Jan2026 21:07:58.893] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Stopping!
-[01Jan2026 21:07:58.975] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: onMultiplayerScreenInit fired
+[06Sept2026 17:11:17.154] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeclientuserdev, --version, MOD_DEV, --assetIndex, 5, --assetsDir, /home/placebo/.gradle/caches/forge_gradle/assets, --gameDir, ., --fml.forgeVersion, 47.4.0, --fml.mcVersion, 1.20.1, --fml.forgeGroup, net.minecraftforge, --fml.mcpVersion, 20230612.114412, --mixin.config, mmmmm.mixin.json]
+[06Sept2026 17:11:17.156] [main/INFO] [cpw.mods.modlauncher.Launcher/MODLAUNCHER]: ModLauncher 10.0.9+10.0.9+main.dcd20f30 starting: java version 17.0.20.1 by Eclipse Adoptium; OS Linux arch amd64 version 7.2.3-200.nobara.fc44.x86_64
+[06Sept2026 17:11:17.211] [main/INFO] [net.minecraftforge.fml.loading.ImmediateWindowHandler/]: Loading ImmediateWindowProvider fmlearlywindow
+[06Sept2026 17:11:17.260] [main/INFO] [EARLYDISPLAY/]: Trying GL version 4.6
+[06Sept2026 17:11:17.356] [main/INFO] [EARLYDISPLAY/]: Requested GL version 4.6 got version 4.6
+[06Sept2026 17:11:17.392] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.5 Source=union:/home/placebo/.gradle/caches/modules-2/files-2.1/org.spongepowered/mixin/0.8.5/9d1c0c3a304ae6697ecd477218fa61b850bf57fc/mixin-0.8.5.jar%23116!/ Service=ModLauncher Env=CLIENT
+[06Sept2026 17:11:17.430] [pool-2-thread-1/INFO] [EARLYDISPLAY/]: GL info: NVIDIA GeForce RTX 3070/PCIe/SSE2 GL version 4.6.0 NVIDIA 595.91.07, NVIDIA Corporation
+[06Sept2026 17:11:17.540] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file /home/placebo/.gradle/caches/modules-2/files-2.1/net.minecraftforge/javafmllanguage/1.20.1-47.4.0/f0c0b352173d0a378cbdcec9cfc4ba65899a721/javafmllanguage-1.20.1-47.4.0.jar is missing mods.toml file
+[06Sept2026 17:11:17.541] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file /home/placebo/.gradle/caches/modules-2/files-2.1/net.minecraftforge/lowcodelanguage/1.20.1-47.4.0/e862740d8c84d08dbfedea412bef88fe42e727c5/lowcodelanguage-1.20.1-47.4.0.jar is missing mods.toml file
+[06Sept2026 17:11:17.541] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file /home/placebo/.gradle/caches/modules-2/files-2.1/net.minecraftforge/mclanguage/1.20.1-47.4.0/5719b3a297a33f877ed5dde4cb4bd75c859096af/mclanguage-1.20.1-47.4.0.jar is missing mods.toml file
+[06Sept2026 17:11:17.542] [main/WARN] [net.minecraftforge.fml.loading.moddiscovery.ModFileParser/LOADING]: Mod file /home/placebo/.gradle/caches/modules-2/files-2.1/net.minecraftforge/fmlcore/1.20.1-47.4.0/235975dafa4309945b59c56b53f31dc5b65a6051/fmlcore-1.20.1-47.4.0.jar is missing mods.toml file
+[06Sept2026 17:11:17.588] [main/INFO] [net.minecraftforge.fml.loading.moddiscovery.JarInJarDependencyLocator/]: No dependencies to load found. Skipping!
+[06Sept2026 17:11:18.239] [main/INFO] [mixin/]: Compatibility level set to JAVA_17
+[06Sept2026 17:11:18.241] [main/INFO] [cpw.mods.modlauncher.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeclientuserdev' with arguments [--version, MOD_DEV, --gameDir, ., --assetsDir, /home/placebo/.gradle/caches/forge_gradle/assets, --assetIndex, 5]
+[06Sept2026 17:11:18.259] [main/WARN] [mixin/]: Reference map 'mmmmm.refmap.json' for mmmmm.mixin.json could not be read. If this is a development environment you can ignore this message
+[06Sept2026 17:11:19.806] [Datafixer Bootstrap/INFO] [com.mojang.datafixers.DataFixerBuilder/]: 188 Datafixer optimizations took 51 milliseconds
+[06Sept2026 17:11:20.595] [Render thread/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/home/placebo/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.20.1-47.4.0_mapped_official_1.20.1/forge-1.20.1-47.4.0_mapped_official_1.20.1-recomp.jar%23181!/assets/.mcassetsroot' uses unexpected schema
+[06Sept2026 17:11:20.595] [Render thread/WARN] [net.minecraft.server.packs.VanillaPackResourcesBuilder/]: Assets URL 'union:/home/placebo/.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/1.20.1-47.4.0_mapped_official_1.20.1/forge-1.20.1-47.4.0_mapped_official_1.20.1-recomp.jar%23181!/data/.mcassetsroot' uses unexpected schema
+[06Sept2026 17:11:20.604] [Render thread/INFO] [com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService/]: Environment: authHost='https://authserver.mojang.com', accountsHost='https://api.mojang.com', sessionHost='https://sessionserver.mojang.com', servicesHost='https://api.minecraftservices.com', name='PROD'
+[06Sept2026 17:11:20.606] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Setting user: Dev
+[06Sept2026 17:11:20.647] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Backend library: LWJGL version 3.3.1 build 7
+[06Sept2026 17:11:20.748] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Initializing MMMMM...
+[06Sept2026 17:11:20.755] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Config class static block executed.
+[06Sept2026 17:11:20.756] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Registered config spec hash: -402292678
+[06Sept2026 17:11:20.760] [modloading-worker-0/INFO] [net.minecraftforge.common.ForgeMod/FORGEMOD]: Forge mod loading, version 47.4.0, for MC 1.20.1 with MCP 20230612.114412
+[06Sept2026 17:11:20.762] [modloading-worker-0/INFO] [net.minecraftforge.common.MinecraftForge/FORGE]: MinecraftForge v47.4.0 Initialized
+[06Sept2026 17:11:20.763] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: MMMMM initialized.
+[06Sept2026 17:11:21.154] [Render thread/INFO] [net.minecraftforge.gametest.ForgeGameTestHooks/]: Enabled Gametest Namespaces: [mmmmm]
+[06Sept2026 17:11:21.249] [Render thread/INFO] [net.minecraft.server.packs.resources.ReloadableResourceManager/]: Reloading ResourceManager: vanilla, mod_resources
+[06Sept2026 17:11:21.266] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: onLoad fired for mod ID: mmmmm
+[06Sept2026 17:11:21.266] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Received config spec hash: -402292678
+[06Sept2026 17:11:21.267] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Configuration loaded:
+[06Sept2026 17:11:21.267] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: File Server Port: 8080
+[06Sept2026 17:11:21.267] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Enable Mod Filtering: true
+[06Sept2026 17:11:21.267] [modloading-worker-0/INFO] [com.mmmmm.MMMMM/]: Filter Server-side Mods: false
+[06Sept2026 17:11:21.267] [Thread-3/INFO] [com.mmmmm.MMMMM/]: onReload fired for mod ID: mmmmm
+[06Sept2026 17:11:21.267] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Received config spec hash: -402292678
+[06Sept2026 17:11:21.267] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Configuration reloaded:
+[06Sept2026 17:11:21.267] [Thread-3/INFO] [com.mmmmm.MMMMM/]: File Server Port: 8080
+[06Sept2026 17:11:21.267] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Enable Mod Filtering: true
+[06Sept2026 17:11:21.267] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Filter Server-side Mods: false
+[06Sept2026 17:11:21.267] [Thread-3/INFO] [com.mmmmm.MMMMM/]: onReload fired for mod ID: mmmmm
+[06Sept2026 17:11:21.267] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Received config spec hash: -402292678
+[06Sept2026 17:11:21.268] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Configuration reloaded:
+[06Sept2026 17:11:21.268] [Thread-3/INFO] [com.mmmmm.MMMMM/]: File Server Port: 8080
+[06Sept2026 17:11:21.268] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Enable Mod Filtering: true
+[06Sept2026 17:11:21.268] [Thread-3/INFO] [com.mmmmm.MMMMM/]: Filter Server-side Mods: false
+[06Sept2026 17:11:21.274] [Forge Version Check/INFO] [net.minecraftforge.fml.VersionChecker/]: [forge] Starting version check at https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json
+[06Sept2026 17:11:21.337] [Worker-Main-13/INFO] [net.minecraft.client.gui.font.providers.UnihexProvider/]: Found unifont_all_no_pua-15.0.06.hex, loading
+[06Sept2026 17:11:21.591] [Forge Version Check/INFO] [net.minecraftforge.fml.VersionChecker/]: [forge] Found status: OUTDATED Current: 47.4.0 Target: 47.4.10
+[06Sept2026 17:11:22.650] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: minecraft:item.goat_horn.play
+[06Sept2026 17:11:22.651] [Render thread/WARN] [net.minecraft.client.sounds.SoundEngine/]: Missing sound for event: minecraft:entity.goat.screaming.horn_break
+[06Sept2026 17:11:22.662] [Render thread/INFO] [com.mojang.blaze3d.audio.Library/]: OpenAL initialized on device JACK Default
+[06Sept2026 17:11:22.663] [Render thread/INFO] [net.minecraft.client.sounds.SoundEngine/SOUNDS]: Sound engine started
+[06Sept2026 17:11:22.721] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x512x4 minecraft:textures/atlas/blocks.png-atlas
+[06Sept2026 17:11:22.726] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x4 minecraft:textures/atlas/signs.png-atlas
+[06Sept2026 17:11:22.726] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x4 minecraft:textures/atlas/shield_patterns.png-atlas
+[06Sept2026 17:11:22.727] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x512x4 minecraft:textures/atlas/banner_patterns.png-atlas
+[06Sept2026 17:11:22.727] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 1024x1024x4 minecraft:textures/atlas/armor_trims.png-atlas
+[06Sept2026 17:11:22.729] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x64x4 minecraft:textures/atlas/decorated_pot.png-atlas
+[06Sept2026 17:11:22.730] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x4 minecraft:textures/atlas/chest.png-atlas
+[06Sept2026 17:11:22.730] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x4 minecraft:textures/atlas/beds.png-atlas
+[06Sept2026 17:11:22.730] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 512x256x4 minecraft:textures/atlas/shulker_boxes.png-atlas
+[06Sept2026 17:11:22.861] [Render thread/WARN] [net.minecraft.client.renderer.ShaderInstance/]: Shader rendertype_entity_translucent_emissive could not find sampler named Sampler2 in the specified shader program.
+[06Sept2026 17:11:22.884] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x0 minecraft:textures/atlas/particles.png-atlas
+[06Sept2026 17:11:22.885] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 256x256x0 minecraft:textures/atlas/paintings.png-atlas
+[06Sept2026 17:11:22.885] [Render thread/INFO] [net.minecraft.client.renderer.texture.TextureAtlas/]: Created: 128x128x0 minecraft:textures/atlas/mob_effects.png-atlas
+[06Sept2026 17:11:23.064] [Realms Notification Availability checker #1/INFO] [com.mojang.realmsclient.client.RealmsClient/]: Could not authorize you against Realms server: java.lang.RuntimeException: Failed to parse into SignedJWT: 0
+[06Sept2026 17:11:26.844] [Render thread/INFO] [com.mmmmm.MMMMM/]: JoinMultiplayerScreenMixin initialized and init method called.
+[06Sept2026 17:11:26.851] [Render thread/INFO] [com.mmmmm.MMMMM/]: Button added to JoinMultiplayerScreen via mixin
+[06Sept2026 17:11:26.851] [Render thread/INFO] [com.mmmmm.MMMMM/]: Button added to JoinMultiplayerScreen via mixin
+[06Sept2026 17:11:26.851] [Render thread/INFO] [com.mmmmm.MMMMM/]: Custom buttons added to JoinMultiplayerScreen.
+[06Sept2026 17:11:26.868] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: Multiplayer screen initialized. Adding server buttons.
+[06Sept2026 17:11:27.213] [Render thread/ERROR] [net.minecraft.client.multiplayer.ServerStatusPinger/]: Can't ping 217.154.40.197:25570: Disconnected
+[06Sept2026 17:11:28.392] [Render thread/INFO] [com.mmmmm.MMMMM/]: EditServerScreenMixin initialized.
+[06Sept2026 17:11:28.396] [Render thread/INFO] [com.mmmmm.MMMMM/]: EditServerScreenMixin applied and init method called.
+[06Sept2026 17:11:28.397] [Render thread/INFO] [com.mmmmm.client.ServerMetadata/]: Metadata loaded successfully.
+[06Sept2026 17:11:29.298] [Render thread/INFO] [com.mmmmm.MMMMM/]: JoinMultiplayerScreenMixin initialized and init method called.
+[06Sept2026 17:11:29.298] [Render thread/INFO] [com.mmmmm.MMMMM/]: Button added to JoinMultiplayerScreen via mixin
+[06Sept2026 17:11:29.298] [Render thread/INFO] [com.mmmmm.MMMMM/]: Button added to JoinMultiplayerScreen via mixin
+[06Sept2026 17:11:29.298] [Render thread/INFO] [com.mmmmm.MMMMM/]: Custom buttons added to JoinMultiplayerScreen.
+[06Sept2026 17:11:29.299] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: Multiplayer screen initialized. Adding server buttons.
+[06Sept2026 17:11:29.973] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: Update button clicked for server: 217.154.40.197:25569
+[06Sept2026 17:11:32.314] [pool-7-thread-1/INFO] [com.mmmmm.client.ClientEventHandlers/]: Starting mods download from base URL: http://217.154.40.197:25569
+[06Sept2026 17:11:32.314] [pool-7-thread-1/INFO] [com.mmmmm.client.ClientEventHandlers/]: Preparing to download mods from http://217.154.40.197:25569/mods.zip
+[06Sept2026 17:11:32.404] [pool-7-thread-1/ERROR] [com.mmmmm.client.ClientEventHandlers/]: Failed to download or extract one or more packages
+java.net.SocketException: Unexpected end of file from server
+	at sun.net.www.http.HttpClient.parseHTTPHeader(HttpClient.java:962) ~[?:?]
+	at sun.net.www.http.HttpClient.parseHTTP(HttpClient.java:769) ~[?:?]
+	at sun.net.www.http.HttpClient.parseHTTPHeader(HttpClient.java:959) ~[?:?]
+	at sun.net.www.http.HttpClient.parseHTTP(HttpClient.java:769) ~[?:?]
+	at sun.net.www.protocol.http.HttpURLConnection.getInputStream0(HttpURLConnection.java:1750) ~[?:?]
+	at sun.net.www.protocol.http.HttpURLConnection.getInputStream(HttpURLConnection.java:1644) ~[?:?]
+	at java.net.HttpURLConnection.getResponseCode(HttpURLConnection.java:529) ~[?:?]
+	at com.mmmmm.client.ClientEventHandlers.initializeConnection(ClientEventHandlers.java:198) ~[%23186!/:?]
+	at com.mmmmm.client.ClientEventHandlers.downloadAndProcessPackage(ClientEventHandlers.java:167) ~[%23186!/:?]
+	at com.mmmmm.client.ClientEventHandlers.lambda$downloadAndProcessMod$2(ClientEventHandlers.java:114) ~[%23186!/:?]
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136) ~[?:?]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635) ~[?:?]
+	at java.lang.Thread.run(Thread.java:840) ~[?:?]
+[06Sept2026 17:11:35.408] [Render thread/INFO] [com.mmmmm.MMMMM/]: JoinMultiplayerScreenMixin initialized and init method called.
+[06Sept2026 17:11:35.409] [Render thread/INFO] [com.mmmmm.MMMMM/]: Button added to JoinMultiplayerScreen via mixin
+[06Sept2026 17:11:35.409] [Render thread/INFO] [com.mmmmm.MMMMM/]: Button added to JoinMultiplayerScreen via mixin
+[06Sept2026 17:11:35.409] [Render thread/INFO] [com.mmmmm.MMMMM/]: Custom buttons added to JoinMultiplayerScreen.
+[06Sept2026 17:11:35.409] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: Multiplayer screen initialized. Adding server buttons.
+[06Sept2026 17:11:35.473] [Render thread/ERROR] [net.minecraft.client.multiplayer.ServerStatusPinger/]: Can't ping 217.154.40.197:25570: Disconnected
+[06Sept2026 17:11:36.232] [Render thread/INFO] [com.mmmmm.client.ClientEventHandlers/]: Update button clicked for server: 84.8.145.48:8081
+[06Sept2026 17:11:37.663] [pool-7-thread-1/INFO] [com.mmmmm.client.ClientEventHandlers/]: Starting config download (if available) from base URL: http://84.8.145.48:8081
+[06Sept2026 17:11:37.664] [pool-7-thread-1/INFO] [com.mmmmm.client.ClientEventHandlers/]: Preparing to download config from http://84.8.145.48:8081/config.zip
+[06Sept2026 17:11:42.010] [Render thread/INFO] [net.minecraft.client.Minecraft/]: Stopping!

@@ -20,7 +20,7 @@ license="All rights reserved" #mandatory
 # The modid of the mod
 modId="mmmmm" #mandatory
 # The version number of the mod
-version="1.0.2-beta" #mandatory
+version="1.0.0" #mandatory
 # A display name for the mod
 displayName="MMMMM" #mandatory
 # A URL to query for updates for this mod. See the JSON update specification https://docs.minecraftforge.net/en/latest/misc/updatechecker/
